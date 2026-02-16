@@ -10,7 +10,7 @@
     body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; text-transform: uppercase; }
     input, textarea, select { text-transform: uppercase; }
 
-    /* BOTÃO DE TEMA ESTILO IOS */
+    /* BOTÃO DE TEMA IOS */
     .theme-toggle {
       position: fixed;
       top: 15px;
@@ -24,11 +24,6 @@
       font-size: 11px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
-    
-    /* SCROLLBAR CUSTOMIZADA */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
   </style>
 </head>
 <body>
@@ -39,7 +34,6 @@
   <script type="text/babel">
     const { useState, useMemo, useEffect, useCallback } = React;
 
-    // STORAGE VIA LOCALSTORAGE (MANTIDO INTEGRALMENTE)
     const SK = "print3d-archive";
     async function ldA() { try { const v = localStorage.getItem(SK); return v ? JSON.parse(v) : []; } catch { return []; } }
     async function svA(items) { try { localStorage.setItem(SK, JSON.stringify(items)); } catch(e) { console.error(e); } }
@@ -54,7 +48,6 @@
       ASA: { pricePerKg: 180, density: 1.07, description: "RESISTENTE A UV, USO EXTERNO" },
       PC: { pricePerKg: 300, density: 1.20, description: "POLICARBONATO, ALTA RESISTÊNCIA" },
     };
-
     const marketplacePresets = {
       NENHUM: { label: "VENDA DIRETA", taxa: 0, desc: "SEM MARKETPLACE" },
       MERCADOLIVRE: { label: "MERCADO LIVRE", taxa: 13, desc: "~11-16% S/ CATEGORIA" },
@@ -62,7 +55,6 @@
       AMAZON: { label: "AMAZON", taxa: 15, desc: "~8-20% S/ CATEGORIA" },
       CUSTOM: { label: "PERSONALIZADO", taxa: 0, desc: "DEFINA SUA TAXA" },
     };
-
     const statusOptions = [
       { id: "verificada", label: "VERIFICADA", color: "#30D158", icon: "✅" },
       { id: "pendente", label: "PENDENTE", color: "#FFD60A", icon: "⏳" },
@@ -70,7 +62,6 @@
       { id: "favorita", label: "FAVORITA", color: "#AF52DE", icon: "⭐" },
     ];
 
-    // COMPONENTES DE INPUT COM TEMA DINÂMICO
     function NI({ label, value, onChange, unit, step = 1, min = 0, helpText, theme }) {
       return (
         <div style={{ marginBottom: 16 }}>
@@ -102,7 +93,7 @@
       return (
         <div style={{ background: theme.cardBg, borderRadius: 14, padding: "14px 16px", border: `1px solid ${color}44`, flex: 1, minWidth: 120 }}>
           <div style={{ fontSize: 20, marginBottom: 4 }}>{icon}</div>
-          <div style={{ fontSize: 10, color: theme.textSec, fontWeight: "700", marginBottom: 3 }}>{label}</div>
+          <div style={{ fontSize: 10, color: theme.textSec, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 3 }}>{label}</div>
           <div style={{ fontSize: 18, fontWeight: 800, color }}>{value}</div>
           {sub && <div style={{ fontSize: 10, color: "#666", marginTop: 3 }}>{sub}</div>}
         </div>
@@ -163,10 +154,6 @@
       const tabs = [ { id:"peca", label:"🎯 PEÇA" }, { id:"custos", label:"⚡ OPERAÇÃO" }, { id:"mdo", label:"👷 MÃO DE OBRA" }, { id:"acabamento", label:"✨ ACABAMENTO" }, { id:"venda", label:"📦 VENDA" }, { id:"negocio", label:"💼 NEGÓCIO" }, { id:"arquivo", label:`🗂️ ARQUIVO (${arch.length})` } ];
       const bdi = [ { l:"MATERIAL", v:c.cMat, cl:theme.accent }, { l:"ENERGIA", v:c.cEn, cl:"#30D158" }, { l:"DEPRECIAÇÃO", v:c.dep, cl:"#FF453A" }, { l:"MÃO DE OBRA", v:c.cMdo, cl:"#FF9F0A" }, { l:"PÓS-PROC.", v:c.cPos, cl:"#64D2FF" }, { l:"FALHAS", v:c.cFalha, cl:"#BF5AF2" }, { l:"CUSTOS FIXOS", v:c.rCF, cl:"#32D74B" }, { l:"EMBALAGEM", v:c.cEmb, cl:"#5E5CE6" }, { l:"FRETE", v:c.cFr, cl:"#A9E34B" }, { l:"IMPOSTOS", v:c.vImp, cl:"#FF3B30" }, { l:"MARKETPLACE", v:c.vMk, cl:"#FFD60A" } ].filter(i => i.v > 0);
       const isA = tab === "arquivo";
-
-      const Btn = ({children, active, color=theme.accent, onClick}) => (
-        <button onClick={onClick} style={{ padding:"8px 14px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:600, border: active ? `2px solid ${color}` : `1px solid ${theme.border}`, background: active ? `${color}33` : theme.cardBg, color: active ? color : theme.textSec }}>{children}</button>
-      );
 
       return (
         <div style={{ minHeight:"100vh", background: theme.bg, color: theme.text, padding: "24px 16px" }}>
@@ -252,7 +239,7 @@
               </>}
             </div>
 
-            <footer style={{ textAlign:"center", marginTop:30, color:"#48484A", fontSize:11, paddingBottom: 20 }}>© 2026 CB²K PRESENTES 3D - TODOS OS DADOS EM CAIXA ALTA</footer>
+            <footer style={{ textAlign:"center", marginTop:30, color:"#48484A", fontSize:11, paddingBottom: 20 }}>© 2026 CB²K PRESENTES 3D - BRASÍLIA</footer>
           </div>
         </div>
       );
