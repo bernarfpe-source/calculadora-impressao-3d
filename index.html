@@ -3,34 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CALCULADORA 3D - CB²K PRESENTES</title>
+  <title>CALCULADORA DE IMPRESSÃO 3D - CB²K</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖨️</text></svg>" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
-    body { 
-      background: #000000; 
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; 
-      color: #FFFFFF;
-      line-height: 1.4;
-      text-transform: uppercase; /* FORÇA CAIXA ALTA GLOBAL */
-    }
-    /* SCROLLBAR ESTILO IOS */
+    body { background: #000000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #FFFFFF; text-transform: uppercase; }
+    input, select, textarea { text-transform: uppercase; }
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-thumb { background: #38383A; border-radius: 10px; }
-    
-    input[type="range"] {
-      -webkit-appearance: none;
-      width: 100%;
-      height: 4px;
-      background: #38383A;
-      border-radius: 2px;
-      accent-color: #0A84FF;
-    }
-    .ios-blur {
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      background: rgba(28, 28, 30, 0.8);
-    }
+    input[type="range"] { -webkit-appearance: none; width: 100%; height: 4px; background: #38383A; border-radius: 2px; accent-color: #0A84FF; }
   </style>
 </head>
 <body>
@@ -39,23 +20,46 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
   <script type="text/babel">
-    const { useState, useMemo } = React;
+    const { useState, useMemo, useEffect, useCallback } = React;
+
+    const SK = "print3d-archive";
+    async function ldA() { try { const v = localStorage.getItem(SK); return v ? JSON.parse(v) : []; } catch { return []; } }
+    async function svA(items) { try { localStorage.setItem(SK, JSON.stringify(items)); } catch(e) { console.error(e); } }
 
     const materialData = {
-      PLA: { pricePerKg: 120, description: "MAIS COMUM" },
-      ABS: { pricePerKg: 140, description: "RESISTENTE" },
-      PETG: { pricePerKg: 150, description: "FLEXÍVEL" },
-      TPU: { pricePerKg: 200, description: "BORRACHUDO" },
+      PLA: { pricePerKg: 120, density: 1.24, description: "MAIS COMUM, FÁCIL" },
+      ABS: { pricePerKg: 140, density: 1.04, description: "RESISTENTE, INDUSTRIAL" },
+      PETG: { pricePerKg: 150, density: 1.27, description: "RESISTENTE E FLEXÍVEL" },
+      TPU: { pricePerKg: 200, density: 1.21, description: "FLEXÍVEL, BORRACHUDO" },
+      NYLON: { pricePerKg: 280, density: 1.14, description: "ALTA RESISTÊNCIA" },
+      RESINA: { pricePerKg: 250, density: 1.10, description: "ALTA DEFINIÇÃO" },
+      ASA: { pricePerKg: 180, density: 1.07, description: "RESISTENTE A UV" },
+      PC: { pricePerKg: 300, density: 1.20, description: "POLICARBONATO" },
     };
 
-    function NI({ label, value, onChange, unit }) {
+    const marketplacePresets = {
+      NENHUM: { label: "VENDA DIRETA", taxa: 0, desc: "SEM MARKETPLACE" },
+      MERCADOLIVRE: { label: "MERCADO LIVRE", taxa: 13, desc: "~11-16% S/ CATEGORIA" },
+      SHOPEE: { label: "SHOPEE", taxa: 14, desc: "~12-18% + COMISSÃO" },
+      AMAZON: { label: "AMAZON", taxa: 15, desc: "~8-20% S/ CATEGORIA" },
+      CUSTOM: { label: "PERSONALIZADO", taxa: 0, desc: "DEFINA SUA TAXA" },
+    };
+
+    const statusOptions = [
+      { id: "verificada", label: "VERIFICADA", color: "#30D158", icon: "✅" },
+      { id: "pendente", label: "PENDENTE", color: "#FFD60A", icon: "⏳" },
+      { id: "problema", label: "PROBLEMA", color: "#FF453A", icon: "⚠️" },
+      { id: "favorita", label: "FAVORITA", color: "#AF52DE", icon: "⭐" },
+    ];
+
+    function NI({ label, value, onChange, unit, step = 1, min = 0 }) {
       return (
-        <div style={{ marginBottom: 18 }}>
-          <label style={{ display: "block", fontSize: 11, fontWeight: "600", color: "#8E8E93", marginBottom: 6 }}>{label}</label>
-          <div style={{ display: "flex", alignItems: "center", background: "#1C1C1E", borderRadius: 10, padding: "10px 14px", border: "0.5px solid #38383A" }}>
-            <input type="number" value={value} onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-              style={{ flex: 1, background: "transparent", border: "none", color: "#FFFFFF", fontSize: 16, outline: "none", fontWeight: "600" }} />
-            {unit && <span style={{ color: "#8E8E93", fontSize: 13 }}>{unit}</span>}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", fontSize: 11, fontWeight: "700", color: "#8E8E93", marginBottom: 6 }}>{label}</label>
+          <div style={{ display: "flex", alignItems: "center", background: "#1C1C1E", borderRadius: 10, padding: "8px 12px", border: "0.5px solid #38383A" }}>
+            <input type="number" value={value} onChange={(e) => onChange(parseFloat(e.target.value) || 0)} step={step} min={min}
+              style={{ flex: 1, background: "transparent", border: "none", color: "#FFFFFF", fontSize: 16, outline: "none" }} />
+            {unit && <span style={{ color: "#8E8E93", fontSize: 14 }}>{unit}</span>}
           </div>
         </div>
       );
@@ -63,10 +67,10 @@
 
     function CC({ label, value, icon, color = "#0A84FF", sub }) {
       return (
-        <div style={{ background: "#1C1C1E", borderRadius: 14, padding: "14px", border: "0.5px solid #38383A", flex: 1 }}>
-          <div style={{ fontSize: 18, marginBottom: 6 }}>{icon}</div>
-          <div style={{ fontSize: 10, color: "#8E8E93", fontWeight: "700", marginBottom: 2 }}>{label}</div>
-          <div style={{ fontSize: 18, fontWeight: "800", color }}>{value}</div>
+        <div style={{ background: "#1C1C1E", borderRadius: 14, padding: "14px", border: "0.5px solid #38383A", flex: 1, minWidth: 120 }}>
+          <div style={{ fontSize: 18, marginBottom: 4 }}>{icon}</div>
+          <div style={{ fontSize: 9, color: "#8E8E93", fontWeight: "700" }}>{label}</div>
+          <div style={{ fontSize: 16, fontWeight: "800", color }}>{value}</div>
           {sub && <div style={{ fontSize: 9, color: "#636366", marginTop: 2 }}>{sub}</div>}
         </div>
       );
@@ -75,79 +79,140 @@
     function App() {
       const [pg, sPg] = useState(50), [th, sTh] = useState(4), [tm, sTm] = useState(30), [mat, sMat] = useState("PLA");
       const [ci, sCi] = useState(3000), [vu, sVu] = useState(5000), [pw, sPw] = useState(250), [ckw, sCkw] = useState(0.85);
-      const [ml, sMl] = useState(50), [tab, sTab] = useState("PEÇA");
+      const [inf, sInf] = useState(20), [fp, sFp] = useState(5);
+      const [lix, sLix] = useState(false), [pin, sPin] = useState(false), [acab, sAcab] = useState(false), [sup, sSup] = useState(true);
+      const [vhm, sVhm] = useState(30), [tsu, sTsu] = useState(15), [tpp, sTpp] = useState(20);
+      const [ml, sMl] = useState(50), [qtd, sQtd] = useState(1), [cfm, sCfm] = useState(200), [hm, sHm] = useState(200);
+      const [ff, sFf] = useState(15), [fpc, sFpc] = useState(true), [ce, sCe] = useState(3);
+      const [rt, sRt] = useState("mei"), [ac, sAc] = useState(6), [mk, sMk] = useState("NENHUM"), [tmc, sTmc] = useState(15), [tfm, sTfm] = useState(0);
+      const [tab, sTab] = useState("peca"), [arch, sArch] = useState([]), [nome, sNome] = useState(""), [notas, sNotas] = useState(""), [status, sStatus] = useState("verificada");
 
-      const f = v => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+      useEffect(() => { ldA().then(sArch); }, []);
 
       const c = useMemo(() => {
-        const tH = th + tm / 60;
-        const cMat = (pg / 1000) * (materialData[mat].pricePerKg);
-        const cEn = (pw / 1000) * tH * ckw;
-        const dep = (ci / vu) * tH;
-        const cProd = cMat + cEn + dep;
-        const pFin = cProd * (1 + ml / 100) / 0.85; // CONSIDERA 15% TAXAS MÉDIAS
-        return { cProd, pVenda: pFin, lucro: pFin - cProd };
-      }, [pg, th, tm, mat, ci, vu, pw, ckw, ml]);
+        const m = materialData[mat] || materialData.PLA, tH = th + tm / 60;
+        const cMat = (pg / 1000) * m.pricePerKg, cEn = (pw / 1000) * tH * ckw, dep = (ci / vu) * tH;
+        const cMdo = ((tsu + tpp) / 60) * vhm;
+        let cPos = 0; if (lix) cPos += 2.5; if (pin) cPos += 8; if (acab) cPos += 5; if (sup) cPos += 1.5;
+        const cFalha = (cMat + cEn) * (fp / 100), rCF = (cfm / hm) * tH;
+        const cProd = cMat + cEn + dep + cMdo + cPos + cFalha + rCF + ce + (fpc ? 0 : ff);
+        const pBase = cProd * (1 + ml / 100);
+        const aImp = { mei:5, simples:6, presumido:11.33, real:15, informal:0, custom:ac }[rt] ?? 5;
+        const tMk = mk === "NENHUM" ? 0 : mk === "CUSTOM" ? tmc : marketplacePresets[mk].taxa;
+        const tTx = (tMk / 100) + (aImp / 100);
+        const pFin = tTx < 1 ? pBase / (1 - tTx) : pBase * 2;
+        return { cProd, cTot: cProd + (pFin * tTx) + tfm, pVenda: pFin, lucro: pFin - (cProd + (pFin * tTx) + tfm), mReal: ((pFin - cProd) / pFin) * 100 };
+      }, [pg, th, tm, mat, ci, vu, pw, ckw, fp, lix, pin, acab, sup, vhm, tsu, tpp, ml, cfm, hm, ff, fpc, ce, rt, mk, tmc, tfm, ac]);
+
+      const doSave = async () => {
+        if (!nome) return;
+        const n = { id: Date.now().toString(), nome, status, data: new Date().toISOString(), res: { ...c }, params: { mat, pg } };
+        const u = [n, ...arch]; sArch(u); await svA(u); sNome("");
+      };
+
+      const f = v => `R$ ${v.toFixed(2)}`;
 
       return (
-        <div style={{ maxWidth: 450, margin: "0 auto", padding: "20px" }}>
+        <div style={{ maxWidth: 800, margin: "0 auto", padding: "20px" }}>
           <header style={{ textAlign: "center", marginBottom: 25 }}>
-            <h1 style={{ fontSize: 20, fontWeight: "800" }}>CALCULADORA 3D</h1>
-            <p style={{ fontSize: 10, color: "#0A84FF", fontWeight: "700" }}>CB²K PRESENTES 3D</p>
+            <h1 style={{ fontSize: 24, fontWeight: "900" }}>CALCULADORA CB²K</h1>
+            <p style={{ color: "#0A84FF", fontSize: 11, fontWeight: "700" }}>SISTEMA OPERACIONAL V1.0</p>
           </header>
 
-          <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-            <CC icon="🏷️" label="VENDA" value={f(c.pVenda)} color="#0A84FF" />
-            <CC icon="📈" label="LUCRO" value={f(c.lucro)} color="#30D158" />
+          <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+            <CC icon="🏗️" label="CUSTO PROD." value={f(c.cProd)} color="#FF453A" />
+            <CC icon="🏷️" label="PREÇO VENDA" value={f(c.pVenda)} color="#0A84FF" />
+            <CC icon="📈" label="LUCRO LÍQ." value={f(c.lucro)} color="#30D158" />
           </div>
 
-          <div style={{ display: "flex", background: "#1C1C1E", borderRadius: 12, padding: "4px", marginBottom: 20 }}>
-            {["PEÇA", "MÁQUINA", "LUCRO"].map(t => (
+          <div style={{ display: "flex", gap: 5, overflowX: "auto", marginBottom: 20, paddingBottom: 5 }}>
+            {["peca", "custos", "mdo", "acabamento", "venda", "arquivo"].map(t => (
               <button key={t} onClick={() => sTab(t)} style={{
-                flex: 1, padding: "8px", borderRadius: 8, border: "none", fontSize: 10, fontWeight: "800",
-                background: tab === t ? "#38383A" : "transparent", color: tab === t ? "#FFF" : "#8E8E93"
+                padding: "10px 15px", borderRadius: 12, border: "none", fontSize: 10, fontWeight: "800",
+                background: tab === t ? "#0A84FF" : "#1C1C1E", color: "#FFF", whiteSpace: "nowrap"
               }}>{t}</button>
             ))}
           </div>
 
-          <div style={{ background: "#1C1C1E", borderRadius: 18, padding: "20px", border: "0.5px solid #38383A" }}>
-            {tab === "PEÇA" && (
+          <div style={{ background: "#1C1C1E", borderRadius: 20, padding: "20px", border: "0.5px solid #38383A" }}>
+            {tab === "peca" && (
               <>
-                <NI label="PESO (G)" value={pg} onChange={sPg} unit="G" />
+                <NI label="PESO DA PEÇA (G)" value={pg} onChange={sPg} unit="G" />
                 <div style={{ display: "flex", gap: 10 }}>
-                  <NI label="HORAS" value={th} onChange={sTh} unit="H" />
-                  <NI label="MIN" value={tm} onChange={sTm} unit="M" />
+                  <NI label="HORAS" value={th} onChange={sTh} />
+                  <NI label="MINUTOS" value={tm} onChange={sTm} />
                 </div>
+                <label style={{ display: "block", fontSize: 11, color: "#8E8E93", marginBottom: 10 }}>MATERIAL</label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                   {Object.keys(materialData).map(m => (
                     <button key={m} onClick={() => sMat(m)} style={{
-                      padding: "10px", borderRadius: 10, border: mat === m ? "2px solid #0A84FF" : "1px solid #38383A",
+                      padding: "12px", borderRadius: 10, border: mat === m ? "2px solid #0A84FF" : "1px solid #38383A",
                       background: mat === m ? "rgba(10, 132, 255, 0.1)" : "transparent", color: "#FFF", fontSize: 11, fontWeight: "700"
                     }}>{m}</button>
                   ))}
                 </div>
               </>
             )}
-            {tab === "MÁQUINA" && (
+
+            {tab === "custos" && (
               <>
-                <NI label="CUSTO IMPRESSORA" value={ci} onChange={sCi} unit="R$" />
-                <NI label="VIDA ÚTIL (H)" value={vu} onChange={sVu} unit="H" />
-                <NI label="KWH (R$)" value={ckw} onChange={sCkw} unit="R$" />
+                <NI label="VALOR DA IMPRESSORA" value={ci} onChange={sCi} unit="R$" />
+                <NI label="VIDA ÚTIL (HORAS)" value={vu} onChange={sVu} unit="H" />
+                <NI label="POTÊNCIA (W)" value={pw} onChange={sPw} unit="W" />
+                <NI label="CUSTO KWH" value={ckw} onChange={sCkw} unit="R$" />
+                <NI label="TAXA DE FALHA (%)" value={fp} onChange={sFp} unit="%" />
               </>
             )}
-            {tab === "LUCRO" && (
+
+            {tab === "mdo" && (
               <>
-                <label style={{ display: "block", fontSize: 11, color: "#8E8E93", marginBottom: 10 }}>MARGEM DESEJADA: {ml}%</label>
+                <NI label="VALOR DA SUA HORA" value={vhm} onChange={sVhm} unit="R$/H" />
+                <NI label="MINUTOS SETUP" value={tsu} onChange={sTsu} />
+                <NI label="MINUTOS PÓS-PROC." value={tpp} onChange={sTpp} />
+                <label style={{ display: "block", fontSize: 11, color: "#8E8E93", marginBottom: 10 }}>MARGEM DE LUCRO: {ml}%</label>
                 <input type="range" min="0" max="200" value={ml} onChange={e => sMl(e.target.value)} />
               </>
             )}
-          </div>
 
-          <footer style={{ marginTop: 25 }}>
-            <button style={{
-              width: "100%", padding: "16px", borderRadius: 14, background: "#0A84FF", color: "#FFF",
-              border: "none", fontSize: 14, fontWeight: "800"
-            }}>SALVAR REGISTRO</button>
+            {tab === "venda" && (
+              <>
+                <NI label="EMBALAGEM" value={ce} onChange={sCe} unit="R$" />
+                <NI label="FRETE" value={ff} onChange={sFf} unit="R$" />
+                <label style={{ display: "block", fontSize: 11, color: "#8E8E93", marginBottom: 10 }}>IMPOSTO (REGIME)</label>
+                <select value={rt} onChange={e => sRt(e.target.value)} style={{ width: "100%", padding: "12px", borderRadius: 10, background: "#2C2C2E", color: "#FFF", border: "none", marginBottom: 15 }}>
+                  <option value="mei">MEI (~5%)</option>
+                  <option value="simples">SIMPLES (~6%)</option>
+                  <option value="informal">INFORMAL (0%)</option>
+                </select>
+                <label style={{ display: "block", fontSize: 11, color: "#8E8E93", marginBottom: 10 }}>MARKETPLACE</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  {Object.keys(marketplacePresets).map(m => (
+                    <button key={m} onClick={() => sMk(m)} style={{
+                      padding: "10px", borderRadius: 10, border: mk === m ? "2px solid #FFD60A" : "1px solid #38383A",
+                      background: mk === m ? "rgba(255, 214, 10, 0.1)" : "transparent", color: "#FFF", fontSize: 10, fontWeight: "700"
+                    }}>{m}</button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {tab === "arquivo" && (
+              <>
+                <NI label="NOME DA PEÇA" value={nome} onChange={sNome} />
+                <button onClick={doSave} style={{ width: "100%", padding: "15px", borderRadius: 12, background: "#30D158", color: "#FFF", border: "none", fontWeight: "800", marginBottom: 20 }}>SALVAR NO ARQUIVO</button>
+                <div style={{ maxHeight: 300, overflowY: "auto" }}>
+                  {arch.map(p => (
+                    <div key={p.id} style={{ padding: "12px", background: "#2C2C2E", borderRadius: 10, marginBottom: 8, fontSize: 11 }}>
+                      <div style={{ fontWeight: "800" }}>{p.nome} - {p.params.mat}</div>
+                      <div style={{ color: "#30D158" }}>VENDA: {f(p.res.pVenda)}</div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          <footer style={{ textAlign: "center", marginTop: 25, fontSize: 10, color: "#48484A" }}>
+            CB²K PRESENTES 3D - TODOS OS DADOS EM CAIXA ALTA
           </footer>
         </div>
       );
