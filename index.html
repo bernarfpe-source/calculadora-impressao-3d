@@ -6,11 +6,11 @@
   <title>CALCULADORA DE IMPRESSÃO 3D - CB²K</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖨️</text></svg>" />
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; transition: background 0.3s, color 0.3s; }
+    * { margin: 0; padding: 0; box-sizing: border-box; transition: background 0.2s, color 0.2s; }
     body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; text-transform: uppercase; }
     input, textarea, select { text-transform: uppercase; }
 
-    /* BOTÃO DE TEMA IOS */
+    /* BOTÃO DE TEMA */
     .theme-toggle {
       position: fixed;
       top: 15px;
@@ -34,89 +34,55 @@
   <script type="text/babel">
     const { useState, useMemo, useEffect, useCallback } = React;
 
-    // STORAGE VIA LOCALSTORAGE
     const SK = "print3d-archive";
     async function ldA() { try { const v = localStorage.getItem(SK); return v ? JSON.parse(v) : []; } catch { return []; } }
     async function svA(items) { try { localStorage.setItem(SK, JSON.stringify(items)); } catch(e) { console.error(e); } }
 
     const materialData = {
-      PLA: { pricePerKg: 120, density: 1.24, description: "MAIS COMUM, FÁCIL DE IMPRIMIR" },
-      ABS: { pricePerKg: 140, density: 1.04, description: "RESISTENTE, USO INDUSTRIAL" },
+      PLA: { pricePerKg: 120, density: 1.24, description: "MAIS COMUM, FÁCIL" },
+      ABS: { pricePerKg: 140, density: 1.04, description: "RESISTENTE, INDUSTRIAL" },
       PETG: { pricePerKg: 150, density: 1.27, description: "RESISTENTE E FLEXÍVEL" },
-      TPU: { pricePerKg: 200, density: 1.21, description: "FLEXÍVEL, BORRACHUDO" },
-      NYLON: { pricePerKg: 280, density: 1.14, description: "ALTA RESISTÊNCIA MECÂNICA" },
-      RESINA: { pricePerKg: 250, density: 1.10, description: "ALTA DEFINIÇÃO (SLA/DLP)" },
-      ASA: { pricePerKg: 180, density: 1.07, description: "RESISTENTE A UV, USO EXTERNO" },
-      PC: { pricePerKg: 300, density: 1.20, description: "POLICARBONATO, ALTA RESISTÊNCIA" },
+      TPU: { pricePerKg: 200, density: 1.21, description: "BORRACHUDO" },
+      RESINA: { pricePerKg: 250, density: 1.10, description: "ALTA DEFINIÇÃO" },
     };
+
     const marketplacePresets = {
-      NENHUM: { label: "VENDA DIRETA", taxa: 0, desc: "SEM MARKETPLACE" },
-      MERCADOLIVRE: { label: "MERCADO LIVRE", taxa: 13, desc: "~11-16% S/ CATEGORIA" },
-      SHOPEE: { label: "SHOPEE", taxa: 14, desc: "~12-18% + COMISSÃO" },
-      AMAZON: { label: "AMAZON", taxa: 15, desc: "~8-20% S/ CATEGORIA" },
-      CUSTOM: { label: "PERSONALIZADO", taxa: 0, desc: "DEFINA SUA TAXA" },
+      NENHUM: { label: "VENDA DIRETA", taxa: 0 },
+      ML: { label: "MERCADO LIVRE", taxa: 13 },
+      SHOPEE: { label: "SHOPEE", taxa: 14 },
     };
-    const statusOptions = [
-      { id: "verificada", label: "VERIFICADA", color: "#30D158", icon: "✅" },
-      { id: "pendente", label: "PENDENTE", color: "#FFD60A", icon: "⏳" },
-      { id: "problema", label: "PROBLEMA", color: "#FF453A", icon: "⚠️" },
-      { id: "favorita", label: "FAVORITA", color: "#AF52DE", icon: "⭐" },
-    ];
 
-    function NI({ label, value, onChange, unit, step = 1, min = 0, helpText, theme }) {
+    function NI({ label, value, onChange, unit, theme }) {
       return (
         <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: theme.textSec, marginBottom: 6, letterSpacing: "0.5px" }}>{label}</label>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: theme.textSec, marginBottom: 6 }}>{label}</label>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <input type="number" value={value} onChange={(e) => onChange(parseFloat(e.target.value) || 0)} step={step} min={min}
-              style={{ flex: 1, padding: "10px 14px", borderRadius: 10, border: `1px solid ${theme.border}`, background: theme.inputBg, color: theme.text, fontSize: 16, outline: "none" }} />
-            {unit && <span style={{ color: "#8E8E93", fontSize: 14, minWidth: 30 }}>{unit}</span>}
+            <input type="number" value={value} onChange={(e) => onChange(parseFloat(e.target.value) || 0)} 
+              style={{ flex: 1, padding: "12px", borderRadius: 10, border: `1px solid ${theme.border}`, background: theme.inputBg, color: theme.text, fontSize: 16, outline: "none" }} />
+            {unit && <span style={{ color: theme.textSec, fontSize: 14 }}>{unit}</span>}
           </div>
-          {helpText && <span style={{ fontSize: 11, color: "#666", marginTop: 4, display: "block" }}>{helpText}</span>}
         </div>
       );
     }
 
-    function SI({ label, value, onChange, min, max, step = 1, unit = "%", helpText, theme }) {
+    function CC({ label, value, icon, color, sub, theme }) {
       return (
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-            <label style={{ fontSize: 13, fontWeight: 600, color: theme.textSec, letterSpacing: "0.5px" }}>{label}</label>
-            <span style={{ fontSize: 15, fontWeight: 700, color: theme.accent }}>{value + unit}</span>
-          </div>
-          <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(parseFloat(e.target.value))} style={{ width: "100%", accentColor: theme.accent }} />
-          {helpText && <span style={{ fontSize: 11, color: "#666", marginTop: 2, display: "block" }}>{helpText}</span>}
-        </div>
-      );
-    }
-
-    function CC({ label, value, icon, color = "#0A84FF", sub, theme }) {
-      return (
-        <div style={{ background: theme.cardBg, borderRadius: 14, padding: "14px 16px", border: `1px solid ${color}44`, flex: 1, minWidth: 120 }}>
-          <div style={{ fontSize: 20, marginBottom: 4 }}>{icon}</div>
-          <div style={{ fontSize: 10, color: theme.textSec, fontWeight: "700", marginBottom: 3 }}>{label}</div>
-          <div style={{ fontSize: 18, fontWeight: 800, color }}>{value}</div>
-          {sub && <div style={{ fontSize: 10, color: "#666", marginTop: 3 }}>{sub}</div>}
+        <div style={{ background: theme.cardBg, borderRadius: 16, padding: "18px", border: `1px solid ${color}44`, flex: 1, minWidth: 140 }}>
+          <div style={{ fontSize: 22, marginBottom: 8 }}>{icon}</div>
+          <div style={{ fontSize: 10, color: theme.textSec, fontWeight: 700 }}>{label}</div>
+          <div style={{ fontSize: 18, fontWeight: 900, color }}>{value}</div>
+          {sub && <div style={{ fontSize: 9, color: theme.textSec, marginTop: 4 }}>{sub}</div>}
         </div>
       );
     }
 
     function App() {
       const [dark, setDark] = useState(true);
+      const [tab, setTab] = useState("PEÇA");
       const [pg, sPg] = useState(50), [th, sTh] = useState(4), [tm, sTm] = useState(30), [mat, sMat] = useState("PLA");
       const [ci, sCi] = useState(3000), [vu, sVu] = useState(5000), [pw, sPw] = useState(250), [ckw, sCkw] = useState(0.85);
-      const [inf, sInf] = useState(20), [fp, sFp] = useState(5);
-      const [lix, sLix] = useState(false), [pin, sPin] = useState(false), [acab, sAcab] = useState(false), [sup, sSup] = useState(true);
-      const [vhm, sVhm] = useState(30), [tsu, sTsu] = useState(15), [tpp, sTpp] = useState(20);
-      const [ml, sMl] = useState(50), [qtd, sQtd] = useState(1), [cfm, sCfm] = useState(200), [hm, sHm] = useState(200);
-      const [ff, sFf] = useState(15), [fpc, sFpc] = useState(true), [ce, sCe] = useState(3);
-      const [rt, sRt] = useState("mei"), [ac, sAc] = useState(6);
-      const [mk, sMk] = useState("NENHUM"), [tmc, sTmc] = useState(15), [tfm, sTfm] = useState(0);
-      const [tab, sTab] = useState("peca");
-      const [arch, sArch] = useState([]), [aLoad, sALoad] = useState(true);
-      const [nome, sNome] = useState(""), [notas, sNotas] = useState(""), [status, sStatus] = useState("verificada");
-      const [search, sSearch] = useState(""), [filt, sFilt] = useState("todos"), [sort, sSort] = useState("data");
-      const [cdel, sCdel] = useState(null), [saved, sSaved] = useState(false);
+      const [ml, sMl] = useState(50), [qtd, sQtd] = useState(1);
+      const [arch, sArch] = useState([]);
 
       const theme = dark ? {
         bg: "#000000", cardBg: "#1C1C1E", inputBg: "#2C2C2E", text: "#FFFFFF", textSec: "#8E8E93", border: "#38383A", accent: "#0A84FF"
@@ -124,207 +90,95 @@
         bg: "#F2F2F7", cardBg: "#FFFFFF", inputBg: "#E5E5EA", text: "#000000", textSec: "#3A3A3C", border: "#C7C7CC", accent: "#007AFF"
       };
 
-      useEffect(() => { ldA().then(i => { sArch(i); sALoad(false); }); }, []);
-
-      const aImp = useMemo(() => ({ mei:5, simples:6, presumido:11.33, real:15, informal:0, custom:ac })[rt] ?? 5, [rt, ac]);
-      const tMk = useMemo(() => mk === "NENHUM" ? 0 : mk === "CUSTOM" ? tmc : marketplacePresets[mk]?.taxa || 0, [mk, tmc]);
-
       const c = useMemo(() => {
-        const m = materialData[mat] || materialData.PLA; 
         const tH = th + tm / 60;
-        const cMat = (pg / 1000) * m.pricePerKg, cEn = (pw / 1000) * tH * ckw, dep = (ci / vu) * tH;
-        const cMdo = ((tsu + tpp) / 60) * vhm;
-        let cPos = 0; if (lix) cPos += 2.5; if (pin) cPos += 8; if (acab) cPos += 5; if (sup) cPos += 1.5;
-        const cFalha = (cMat + cEn) * (fp / 100), rCF = (cfm / hm) * tH, cEmb = ce, cFr = fpc ? 0 : ff;
-        const cProd = cMat + cEn + dep + cMdo + cPos + cFalha + rCF + cEmb + cFr;
-        const pBase = cProd * (1 + ml / 100), tTx = (tMk / 100) + (aImp / 100);
-        const pFin = tTx < 1 ? pBase / (1 - tTx) : pBase * 2;
-        const vImp = pFin * (aImp / 100), vMk = pFin * (tMk / 100) + tfm;
-        const cTot = cProd + vImp + vMk, lucro = pFin - cTot;
-        return { cMat, cEn, dep, cMdo, cPos, cFalha, rCF, cEmb, cFr, cProd, vImp, vMk, cTot, pVenda: pFin, lucro,
-          cTotLote: cTot * qtd, pVendaLote: pFin * qtd, lucroLote: lucro * qtd, tH, pesoTot: pg * qtd,
-          mReal: cTot > 0 ? (lucro / cTot * 100) : 0 };
-      }, [pg, th, tm, mat, ci, vu, pw, ckw, inf, fp, lix, pin, acab, sup, vhm, tsu, tpp, ml, qtd, cfm, hm, ff, fpc, ce, aImp, tMk, tfm]);
-
-      const doSave = useCallback(async () => {
-        if (!nome.trim()) return;
-        const np = { id: Date.now().toString(36), nome: nome.trim().toUpperCase(), notas: notas.trim(), status, data: new Date().toISOString(),
-          params: { pg, th, tm, mat, inf, qtd, lix, pin, acab, sup, mk, rt, ml, fpc, ff, ce },
-          res: { cProd: c.cProd, cTot: c.cTot, pVenda: c.pVenda, lucro: c.lucro, mReal: c.mReal } };
-        const u = [np, ...arch]; sArch(u); await svA(u); sNome(""); sNotas(""); sSaved(true); setTimeout(() => sSaved(false), 2000);
-      }, [nome, notas, status, pg, th, tm, mat, inf, qtd, lix, pin, acab, sup, mk, rt, ml, fpc, ff, ce, c, arch]);
-
-      const doDelete = useCallback(async (id) => { const u = arch.filter(p => p.id !== id); sArch(u); await svA(u); sCdel(null); }, [arch]);
-      const doLoad = useCallback((p) => {
-        const d = p.params; sPg(d.pg); sTh(d.th); sTm(d.tm); sMat(d.mat); sInf(d.inf); sQtd(d.qtd);
-        sLix(d.lix); sPin(d.pin); sAcab(d.acab); sSup(d.sup); sMk(d.mk); sRt(d.rt); sMl(d.ml); sFpc(d.fpc); sFf(d.ff); sCe(d.ce); sTab("peca");
-      }, []);
-      const doStatus = useCallback(async (id, ns) => { const u = arch.map(p => p.id === id ? {...p, status: ns} : p); sArch(u); await svA(u); }, [arch]);
-      const doClear = useCallback(async () => { sArch([]); await svA([]); sCdel(null); }, []);
-
-      const fArch = useMemo(() => {
-        let it = arch;
-        if (filt !== "todos") it = it.filter(p => p.status === filt);
-        if (search.trim()) { const q = search.toLowerCase(); it = it.filter(p => p.nome.toLowerCase().includes(q) || (p.notas||"").toLowerCase().includes(q) || p.params.mat.toLowerCase().includes(q)); }
-        if (sort === "data") it = [...it].sort((a,b) => new Date(b.data)-new Date(a.data));
-        else if (sort === "nome") it = [...it].sort((a,b) => a.nome.localeCompare(b.nome));
-        else if (sort === "preco") it = [...it].sort((a,b) => b.res.pVenda-a.res.pVenda);
-        else if (sort === "lucro") it = [...it].sort((a,b) => b.res.lucro-a.res.lucro);
-        return it;
-      }, [arch, filt, search, sort]);
+        const cMat = (pg / 1000) * materialData[mat].pricePerKg;
+        const cEn = (pw / 1000) * tH * ckw;
+        const dep = (ci / vu) * tH;
+        const cProd = cMat + cEn + dep;
+        const pFin = cProd * (1 + ml / 100) / 0.85;
+        return { prod: cProd, venda: pFin, lucro: pFin - cProd };
+      }, [pg, th, tm, mat, ci, vu, pw, ckw, ml]);
 
       const f = v => `R$ ${v.toFixed(2)}`;
+      
       const tabs = [
-        { id:"peca", label:"🎯 PEÇA" }, { id:"custos", label:"⚡ OPERAÇÃO" }, { id:"mdo", label:"👷 MÃO DE OBRA" },
-        { id:"acabamento", label:"✨ ACABAMENTO" }, { id:"venda", label:"📦 VENDA" }, { id:"negocio", label:"💼 NEGÓCIO" },
-        { id:"arquivo", label:`🗂️ ARQUIVO (${arch.length})` },
+        { id: "PEÇA", icon: "🎯" }, { id: "OPERAÇÃO", icon: "⚡" }, 
+        { id: "LUCRO", icon: "📈" }, { id: "ARQUIVO", icon: "🗂️" }
       ];
-      const bdi = [
-        { l:"MATERIAL", v:c.cMat, cl:theme.accent }, { l:"ENERGIA", v:c.cEn, cl:"#30D158" }, { l:"DEPRECIAÇÃO", v:c.dep, cl:"#FF453A" },
-        { l:"MÃO DE OBRA", v:c.cMdo, cl:"#FF9F0A" }, { l:"PÓS-PROC.", v:c.cPos, cl:"#64D2FF" }, { l:"FALHAS", v:c.cFalha, cl:"#BF5AF2" },
-        { l:"CUSTOS FIXOS", v:c.rCF, cl:"#32D74B" }, { l:"EMBALAGEM", v:c.cEmb, cl:"#5E5CE6" }, { l:"FRETE", v:c.cFr, cl:"#A9E34B" },
-        { l:"IMPOSTOS", v:c.vImp, cl:"#FF3B30" }, { l:"MARKETPLACE", v:c.vMk, cl:"#FFD60A" },
-      ].filter(i => i.v > 0);
-      const isA = tab === "arquivo";
-
-      const Btn = ({children, active, color="#0A84FF", onClick}) => (
-        <button onClick={onClick} style={{ padding:"8px 14px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:600, border: active ? `2px solid ${color}` : `1px solid ${theme.border}`, background: active ? `${color}33` : theme.cardBg, color: active ? color : theme.textSec }}>{children}</button>
-      );
 
       return (
-        <div style={{ minHeight:"100vh", background: theme.bg, color: theme.text, padding: "24px 16px" }}>
+        <div style={{ minHeight: "100vh", background: theme.bg, color: theme.text, padding: "20px" }}>
           <button className="theme-toggle" onClick={() => setDark(!dark)} style={{ background: theme.cardBg, color: theme.text }}>
-            {dark ? "☀️ MODO CLARO" : "🌙 MODO ESCURO"}
+            {dark ? "☀️ CLARO" : "🌙 ESCURO"}
           </button>
-          
-          <div style={{ maxWidth:920, margin:"0 auto" }}>
-            <div style={{ textAlign:"center", marginBottom:28 }}>
-              <div style={{ fontSize:38, marginBottom:4 }}>🖨️</div>
-              <h1 style={{ fontSize:26, fontWeight:800, margin:0, color: theme.accent }}>CALCULADORA DE IMPRESSÃO 3D</h1>
-              <p style={{ color: theme.textSec, fontSize:14, marginTop:6 }}>CB²K PRESENTES 3D - SISTEMA OPERACIONAL</p>
+
+          <div style={{ maxWidth: 800, margin: "0 auto" }}>
+            <header style={{ textAlign: "center", marginBottom: 30 }}>
+              <h1 style={{ fontSize: 26, fontWeight: 900, color: theme.accent }}>CALCULADORA CB²K</h1>
+              <p style={{ color: theme.textSec, fontSize: 12 }}>IMPRESSÃO 3D - BRASÍLIA</p>
+            </header>
+
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 25 }}>
+              <CC label="VENDA" value={f(c.venda)} icon="🏷️" color="#30D158" theme={theme} />
+              <CC label="LUCRO" value={f(c.lucro)} icon="📈" color={theme.accent} theme={theme} />
             </div>
 
-            {!isA && <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:24 }}>
-              <CC icon="🏭" label="CUSTO PRODUÇÃO" value={f(c.cProd)} color="#FF453A" sub="SEM IMPOSTOS" theme={theme} />
-              <CC icon="💰" label="CUSTO TOTAL" value={f(c.cTot)} color="#FF9F0A" sub={`${qtd}X = ${f(c.cTotLote)}`} theme={theme} />
-              <CC icon="🏷️" label="PREÇO VENDA" value={f(c.pVenda)} color="#30D158" sub={`MARGEM: ${c.mReal.toFixed(1)}%`} theme={theme} />
-              <CC icon="📈" label="LUCRO LÍQUIDO" value={f(c.lucro)} color={theme.accent} sub={`TOTAL: ${f(c.lucroLote)}`} theme={theme} />
-            </div>}
+            {/* CORREÇÃO DAS ABAS (TEXTO SEMPRE VISÍVEL) */}
+            <nav style={{ display: "flex", gap: 8, marginBottom: 20, overflowX: "auto", paddingBottom: 10 }}>
+              {tabs.map(t => (
+                <button key={t.id} onClick={() => setTab(t.id)} style={{
+                  padding: "12px 20px", borderRadius: 14, border: "none", fontWeight: 800, fontSize: 11, cursor: "pointer", whiteSpace: "nowrap",
+                  background: tab === t.id ? theme.accent : theme.cardBg,
+                  color: tab === t.id ? "#FFFFFF" : theme.text // AQUI O NOME APARECE!
+                }}>
+                  {t.icon} {t.id}
+                </button>
+              ))}
+            </nav>
 
-            <div style={{ display:"flex", gap:4, marginBottom:20, overflowX:"auto", paddingBottom:8 }}>
-              {tabs.map(t => <button key={t.id} onClick={() => sTab(t.id)} style={{
-                padding:"12px 18px", borderRadius:12, border:"none", fontSize:11, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap",
-                background: tab===t.id ? theme.accent : theme.cardBg, color: "#FFF"
-              }}>{t.label}</button>)}
+            <div style={{ background: theme.cardBg, borderRadius: 20, padding: "25px", border: `1px solid ${theme.border}` }}>
+              {tab === "PEÇA" && (
+                <>
+                  <NI label="PESO DA PEÇA (G)" value={pg} onChange={sPg} unit="G" theme={theme} />
+                  <div style={{ display: "flex", gap: 12 }}>
+                    <div style={{ flex: 1 }}><NI label="HORAS" value={th} onChange={sTh} theme={theme} /></div>
+                    <div style={{ flex: 1 }}><NI label="MINUTOS" value={tm} onChange={sTm} theme={theme} /></div>
+                  </div>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: theme.textSec, marginBottom: 10 }}>MATERIAL</label>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    {Object.keys(materialData).map(m => (
+                      <button key={m} onClick={() => sMat(m)} style={{
+                        padding: "15px", borderRadius: 12, border: mat === m ? `2px solid ${theme.accent}` : `1px solid ${theme.border}`,
+                        background: mat === m ? "rgba(10, 132, 255, 0.1)" : "transparent", color: theme.text, fontWeight: 700
+                      }}>{m}</button>
+                    ))}
+                  </div>
+                </>
+              )}
+              {tab === "OPERAÇÃO" && (
+                <>
+                  <NI label="VALOR DA MÁQUINA" value={ci} onChange={sCi} unit="R$" theme={theme} />
+                  <NI label="CUSTO KWH" value={ckw} onChange={sCkw} unit="R$" theme={theme} />
+                </>
+              )}
+              {tab === "LUCRO" && (
+                <>
+                  <label style={{ fontSize: 12 }}>MARGEM: {ml}%</label>
+                  <input type="range" min="0" max="200" value={ml} onChange={e => sMl(e.target.value)} style={{ accentColor: theme.accent, marginTop: 15 }} />
+                </>
+              )}
             </div>
 
-            <div style={{ background: theme.cardBg, borderRadius: 20, padding: "24px", border: `1px solid ${theme.border}` }}>
-              {tab === "peca" && <>
-                <h3 style={{ margin:"0 0 18px", fontSize:16, color: theme.accent }}>📐 DADOS DA PEÇA</h3>
-                <NI label="PESO DA PEÇA" value={pg} onChange={sPg} unit="G" theme={theme} />
-                <div style={{ display:"flex", gap:12 }}><div style={{ flex:1 }}><NI label="HORAS" value={th} onChange={sTh} unit="H" theme={theme} /></div><div style={{ flex:1 }}><NI label="MIN" value={tm} onChange={sTm} unit="MIN" theme={theme} /></div></div>
-                <SI label="INFILL" value={inf} onChange={sInf} min={5} max={100} step={5} theme={theme} />
-                <NI label="QUANTIDADE" value={qtd} onChange={sQtd} unit="UN" min={1} theme={theme} />
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: theme.textSec, marginBottom: 12 }}>MATERIAL</label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  {Object.entries(materialData).map(([k, m]) => (
-                    <button key={k} onClick={() => sMat(k)} style={{
-                      padding: "14px", borderRadius: 12, textAlign: "left", cursor: "pointer",
-                      border: mat === k ? `2px solid ${theme.accent}` : `1px solid ${theme.border}`, background: mat === k ? "rgba(10, 132, 255, 0.1)" : "transparent",
-                      color: theme.text, fontSize: 13, fontWeight: 700
-                    }}>
-                      <div>{k}</div><div style={{ fontSize: 10, color: theme.textSec }}>{m.description}</div>
-                    </button>
-                  ))}
-                </div>
-              </>}
-
-              {tab === "custos" && <>
-                <h3 style={{ margin:"0 0 18px", fontSize:16, color: "#FF453A" }}>⚡ CUSTOS OPERACIONAIS</h3>
-                <NI label="CUSTO DA IMPRESSORA" value={ci} onChange={sCi} unit="R$" theme={theme} />
-                <NI label="VIDA ÚTIL" value={vu} onChange={sVu} unit="H" theme={theme} />
-                <NI label="POTÊNCIA" value={pw} onChange={sPw} unit="W" theme={theme} />
-                <NI label="CUSTO KWH" value={ckw} onChange={sCkw} unit="R$" theme={theme} />
-                <SI label="TAXA DE FALHA" value={fp} onChange={sFp} min={0} max={30} theme={theme} />
-              </>}
-
-              {tab === "mdo" && <>
-                <h3 style={{ margin:"0 0 18px", fontSize:16, color: "#FF9F0A" }}>👷 MÃO DE OBRA</h3>
-                <NI label="VALOR HORA" value={vhm} onChange={sVhm} unit="R$/H" theme={theme} />
-                <NI label="SETUP" value={tsu} onChange={sTsu} unit="MIN" theme={theme} />
-                <NI label="PÓS-PROCESSAMENTO" value={tpp} onChange={sTpp} unit="MIN" theme={theme} />
-              </>}
-
-              {tab === "acabamento" && <>
-                <h3 style={{ margin:"0 0 18px", fontSize:16, color: "#64D2FF" }}>✨ PÓS-PROCESSAMENTO</h3>
-                {[["REMOÇÃO SUPORTE",1.5,sup,sSup],["LIXAMENTO",2.5,lix,sLix],["PINTURA",8,pin,sPin],["ACABAMENTO ESPECIAL",5,acab,sAcab]].map(([lb,pr,st,set]) => (
-                  <button key={lb} onClick={() => set(!st)} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", padding:"14px 16px", marginBottom:8, borderRadius:10, cursor:"pointer", border: st ? `2px solid ${theme.accent}` : `1px solid ${theme.border}`, background: st ? "rgba(10, 132, 255, 0.1)" : theme.inputBg, color:theme.text }}>
-                    <span>{lb} (+{f(pr)})</span>
-                    <span>{st?"✅":"⬜"}</span>
-                  </button>
-                ))}
-              </>}
-
-              {tab === "venda" && <>
-                <h3 style={{ margin:"0 0 18px", fontSize:16, color: "#32D74B" }}>📦 VENDA</h3>
-                <NI label="EMBALAGEM" value={ce} onChange={sCe} unit="R$" theme={theme} />
-                <NI label="FRETE" value={ff} onChange={sFf} unit="R$" theme={theme} />
-                <div style={{ display:"flex", gap:8, marginBottom:16 }}>
-                  {[[true,"CLIENTE PAGA"],[false,"FRETE INCLUSO"]].map(([v,lb]) => (
-                    <button key={String(v)} onClick={() => sFpc(v)} style={{ flex:1, padding:"12px", borderRadius:10, border: fpc===v ? `2px solid #32D74B` : `1px solid ${theme.border}`, background: fpc===v ? "rgba(50, 215, 75, 0.1)" : theme.inputBg, color: theme.text, fontWeight: 700 }}>{lb}</button>
-                  ))}
-                </div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: theme.textSec, marginBottom: 8 }}>IMPOSTOS</label>
-                <select value={rt} onChange={e => sRt(e.target.value)} style={{ width: "100%", padding: "12px", background: theme.inputBg, color: theme.text, borderRadius: 10, border: `1px solid ${theme.border}`, marginBottom: 15 }}>
-                  <option value="mei">MEI (~5%)</option>
-                  <option value="simples">SIMPLES (~6%)</option>
-                  <option value="informal">INFORMAL (0%)</option>
-                </select>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: theme.textSec, marginBottom: 8 }}>MARKETPLACE</label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  {Object.keys(marketplacePresets).map(m => (
-                    <button key={m} onClick={() => sMk(m)} style={{ padding: "12px", borderRadius: 10, border: mk === m ? `2px solid #FFD60A` : `1px solid ${theme.border}`, background: theme.inputBg, color: theme.text, fontWeight: 700 }}>{marketplacePresets[m].label}</button>
-                  ))}
-                </div>
-              </>}
-
-              {tab === "negocio" && <>
-                <h3 style={{ margin:"0 0 18px", fontSize:16, color: theme.accent }}>💼 NEGÓCIO</h3>
-                <SI label="MARGEM DE LUCRO" value={ml} onChange={sMl} min={0} max={200} step={5} theme={theme} />
-                <NI label="CUSTOS FIXOS/MÊS" value={cfm} onChange={sCfm} unit="R$" theme={theme} />
-                <NI label="HORAS PRODUTIVAS/MÊS" value={hm} onChange={sHm} unit="H" theme={theme} />
-              </>}
-
-              {isA && <>
-                <h3 style={{ margin:"0 0 18px", fontSize:16, color: "#30D158" }}>💾 SALVAR NO ARQUIVO</h3>
-                <NI label="NOME DA PEÇA *" value={nome} onChange={sNome} theme={theme} />
-                <textarea value={notas} onChange={e => sNotas(e.target.value)} placeholder="NOTAS..." style={{ width: "100%", padding: "12px", background: theme.inputBg, color: theme.text, borderRadius: 10, border: `1px solid ${theme.border}`, marginBottom: 15 }} />
-                <button onClick={doSave} style={{ width: "100%", padding: "16px", borderRadius: 12, background: "#30D158", color: "#FFF", border: "none", fontWeight: 900 }}>{saved ? "✅ SALVA!" : "💾 SALVAR"}</button>
-                <div style={{ marginTop: 25 }}>
-                  {fArch.map(p => (
-                    <div key={p.id} style={{ padding: "15px", background: theme.bg, borderRadius: 12, border: `1px solid ${theme.border}`, marginBottom: 10 }}>
-                      <div style={{ fontWeight: 800 }}>{p.nome} - {p.params.mat}</div>
-                      <div style={{ color: "#30D158", fontSize: 12, marginTop: 4 }}>VENDA: {f(p.res.pVenda)} | LUCRO: {f(p.res.lucro)}</div>
-                      <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-                        <button onClick={() => doLoad(p)} style={{ flex: 1, padding: "8px", background: theme.accent, color: "#FFF", borderRadius: 8, border: "none", fontWeight: 700 }}>CARREGAR</button>
-                        <button onClick={() => doDelete(p.id)} style={{ padding: "8px 12px", background: "#FF453A", color: "#FFF", borderRadius: 8, border: "none" }}>🗑️</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>}
-            </div>
-
-            <footer style={{ textAlign:"center", marginTop:30, color:"#48484A", fontSize:11, paddingBottom: 20 }}>
-              CB²K PRESENTES 3D - BRASÍLIA
+            <footer style={{ textAlign: "center", marginTop: 30, color: "#48484A", fontSize: 11 }}>
+              © 2026 CB²K PRESENTES 3D - BRASÍLIA
             </footer>
           </div>
         </div>
       );
     }
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
 </body>
 </html>
