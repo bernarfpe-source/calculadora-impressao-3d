@@ -7,7 +7,7 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖨️</text></svg>" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #000000; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: #FFFFFF; }
+    body { background: #000000; font-family: 'Inter', -apple-system, sans-serif; color: #FFFFFF; text-transform: uppercase; }
     input, textarea, select { text-transform: uppercase; }
   </style>
 </head>
@@ -33,6 +33,7 @@
       ASA: { pricePerKg: 180, density: 1.07, description: "RESISTENTE A UV, USO EXTERNO" },
       PC: { pricePerKg: 300, density: 1.20, description: "POLICARBONATO, ALTA RESISTÊNCIA" },
     };
+
     const marketplacePresets = {
       NENHUM: { label: "VENDA DIRETA", taxa: 0, desc: "SEM MARKETPLACE" },
       MERCADOLIVRE: { label: "MERCADO LIVRE", taxa: 13, desc: "~11-16% S/ CATEGORIA" },
@@ -40,6 +41,7 @@
       AMAZON: { label: "AMAZON", taxa: 15, desc: "~8-20% S/ CATEGORIA" },
       CUSTOM: { label: "PERSONALIZADO", taxa: 0, desc: "DEFINA SUA TAXA" },
     };
+
     const statusOptions = [
       { id: "verificada", label: "VERIFICADA", color: "#30D158", icon: "✅" },
       { id: "pendente", label: "PENDENTE", color: "#FFD60A", icon: "⏳" },
@@ -50,7 +52,7 @@
     function NI({ label, value, onChange, unit, step = 1, min = 0, helpText }) {
       return (
         <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#8E8E93", marginBottom: 6, letterSpacing: "0.5px", textTransform: "uppercase" }}>{label}</label>
+          <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#8E8E93", marginBottom: 6, textTransform: "uppercase" }}>{label}</label>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <input type="number" value={value} onChange={(e) => onChange(parseFloat(e.target.value) || 0)} step={step} min={min}
               style={{ flex: 1, padding: "10px 14px", borderRadius: 10, border: "1px solid #38383A", background: "#1C1C1E", color: "#FFFFFF", fontSize: 16, outline: "none" }} />
@@ -65,7 +67,7 @@
       return (
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-            <label style={{ fontSize: 13, fontWeight: 600, color: "#8E8E93", letterSpacing: "0.5px", textTransform: "uppercase" }}>{label}</label>
+            <label style={{ fontSize: 13, fontWeight: 600, color: "#8E8E93", textTransform: "uppercase" }}>{label}</label>
             <span style={{ fontSize: 15, fontWeight: 700, color: "#0A84FF" }}>{value + unit}</span>
           </div>
           <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(parseFloat(e.target.value))} style={{ width: "100%", accentColor: "#0A84FF" }} />
@@ -78,7 +80,7 @@
       return (
         <div style={{ background: "#1C1C1E", borderRadius: 14, padding: "14px 16px", border: `1px solid ${color}44`, flex: 1, minWidth: 120 }}>
           <div style={{ fontSize: 20, marginBottom: 4 }}>{icon}</div>
-          <div style={{ fontSize: 10, color: "#8E8E93", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 3 }}>{label}</div>
+          <div style={{ fontSize: 10, color: "#8E8E93", textTransform: "uppercase", marginBottom: 3 }}>{label}</div>
           <div style={{ fontSize: 18, fontWeight: 800, color }}>{value}</div>
           {sub && <div style={{ fontSize: 10, color: "#636366", marginTop: 3 }}>{sub}</div>}
         </div>
@@ -107,4 +109,123 @@
         const cMat = (pg / 1000) * m.pricePerKg, cEn = (pw / 1000) * tH * ckw, dep = (ci / vu) * tH;
         const cMdo = ((tsu + tpp) / 60) * vhm;
         let cPos = 0; if (lix) cPos += 2.5; if (pin) cPos += 8; if (acab) cPos += 5; if (sup) cPos += 1.5;
-        const cFalha = (cMat + cEn) * (fp / 100), rCF = (cfm / hm) * tH, cEmb = ce, cFr =
+        const cFalha = (cMat + cEn) * (fp / 100), rCF = (cfm / hm) * tH, cEmb = ce, cFr = fpc ? 0 : ff;
+        const cProd = cMat + cEn + dep + cMdo + cPos + cFalha + rCF + cEmb + cFr;
+        const pBase = cProd * (1 + ml / 100), tTx = (tMk / 100) + (aImp / 100);
+        const pFin = tTx < 1 ? pBase / (1 - tTx) : pBase * 2;
+        const vImp = pFin * (aImp / 100), vMk = pFin * (tMk / 100) + tfm;
+        const cTot = cProd + vImp + vMk, lucro = pFin - cTot;
+        return { cMat, cEn, dep, cMdo, cPos, cFalha, rCF, cEmb, cFr, cProd, vImp, vMk, cTot, pVenda: pFin, lucro, cTotLote: cTot * qtd, pVendaLote: pFin * qtd, lucroLote: lucro * qtd, tH, pesoTot: pg * qtd, mReal: cTot > 0 ? (lucro / cTot * 100) : 0 };
+      }, [pg, th, tm, mat, ci, vu, pw, ckw, inf, fp, lix, pin, acab, sup, vhm, tsu, tpp, ml, qtd, cfm, hm, ff, fpc, ce, aImp, tMk, tfm]);
+
+      const doSave = useCallback(async () => {
+        if (!nome.trim()) return;
+        const np = { id: Date.now().toString(36), nome: nome.trim().toUpperCase(), notas: notas.trim(), status, data: new Date().toISOString(), params: { pg, th, tm, mat, inf, qtd, lix, pin, acab, sup, mk, rt, ml, fpc, ff, ce }, res: { cProd: c.cProd, cTot: c.cTot, pVenda: c.pVenda, lucro: c.lucro, mReal: c.mReal } };
+        const u = [np, ...arch]; sArch(u); await svA(u); sNome(""); sNotas(""); sSaved(true); setTimeout(() => sSaved(false), 2000);
+      }, [nome, notas, status, pg, th, tm, mat, inf, qtd, lix, pin, acab, sup, mk, rt, ml, fpc, ff, ce, c, arch]);
+
+      const doDelete = useCallback(async (id) => { const u = arch.filter(p => p.id !== id); sArch(u); await svA(u); sCdel(null); }, [arch]);
+      const doLoad = useCallback((p) => {
+        const d = p.params; sPg(d.pg); sTh(d.th); sTm(d.tm); sMat(d.mat); sInf(d.inf); sQtd(d.qtd); sLix(d.lix); sPin(d.pin); sAcab(d.acab); sSup(d.sup); sMk(d.mk); sRt(d.rt); sMl(d.ml); sFpc(d.fpc); sFf(d.ff); sCe(d.ce); sTab("peca");
+      }, []);
+
+      const f = v => `R$ ${v.toFixed(2)}`;
+      const tabs = [
+        { id:"peca", label:"🎯 PEÇA" }, { id:"custos", label:"⚡ OPERAÇÃO" }, { id:"mdo", label:"👷 MÃO DE OBRA" },
+        { id:"acabamento", label:"✨ ACABAMENTO" }, { id:"venda", label:"📦 VENDA" }, { id:"negocio", label:"💼 NEGÓCIO" },
+        { id:"arquivo", label:`🗂️ ARQUIVO (${arch.length})` },
+      ];
+
+      return (
+        <div style={{ minHeight: "100vh", background: "#000000", color: "#FFFFFF", padding: "24px 16px" }}>
+          <div style={{ maxWidth: 920, margin: "0 auto" }}>
+            <header style={{ textAlign: "center", marginBottom: 28 }}>
+              <h1 style={{ fontSize: 26, fontWeight: 800, color: "#0A84FF" }}>CALCULADORA DE IMPRESSÃO 3D</h1>
+              <p style={{ color: "#8E8E93", fontSize: 14, marginTop: 6 }}>CB²K PRESENTES 3D - SISTEMA OPERACIONAL</p>
+            </header>
+
+            {tab !== "arquivo" && (
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 24 }}>
+                <CC icon="🏭" label="CUSTO PRODUÇÃO" value={f(c.cProd)} color="#FF453A" sub="SEM IMPOSTOS" />
+                <CC icon="💰" label="CUSTO TOTAL" value={f(c.cTot)} color="#FF9F0A" sub={`${qtd}X = ${f(c.cTotLote)}`} />
+                <CC icon="🏷️" label="PREÇO VENDA" value={f(c.pVenda)} color="#32D74B" sub={`MARGEM: ${c.mReal.toFixed(1)}%`} />
+                <CC icon="📈" label="LUCRO LÍQUIDO" value={f(c.lucro)} color="#0A84FF" sub={`TOTAL: ${f(c.lucroLote)}`} />
+              </div>
+            )}
+
+            <nav style={{ display: "flex", gap: 6, marginBottom: 20, overflowX: "auto", paddingBottom: 10 }}>
+              {tabs.map(t => (
+                <button key={t.id} onClick={() => sTab(t.id)} style={{
+                  padding: "12px 18px", borderRadius: 12, border: "none", fontSize: 11, fontWeight: 700,
+                  background: tab === t.id ? "#0A84FF" : "#1C1C1E", color: "#FFF", cursor: "pointer", whiteSpace: "nowrap"
+                }}>{t.label}</button>
+              ))}
+            </nav>
+
+            <div style={{ background: "#1C1C1E", borderRadius: 20, padding: "24px", border: "1px solid #38383A" }}>
+              {tab === "peca" && (
+                <>
+                  <NI label="PESO DA PEÇA" value={pg} onChange={sPg} unit="G" />
+                  <div style={{ display: "flex", gap: 12 }}>
+                    <div style={{ flex: 1 }}><NI label="HORAS" value={th} onChange={sTh} unit="H" /></div>
+                    <div style={{ flex: 1 }}><NI label="MINUTOS" value={tm} onChange={sTm} unit="MIN" /></div>
+                  </div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#8E8E93", marginBottom: 12 }}>MATERIAL</label>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    {Object.keys(materialData).map(m => (
+                      <button key={m} onClick={() => sMat(m)} style={{
+                        padding: "14px", borderRadius: 12, border: mat === m ? "2px solid #0A84FF" : "1px solid #38383A",
+                        background: mat === m ? "rgba(10, 132, 255, 0.1)" : "transparent", color: "#FFF", fontSize: 13, fontWeight: 700
+                      }}>{m}</button>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {tab === "custos" && (
+                <>
+                  <NI label="CUSTO DA IMPRESSORA" value={ci} onChange={sCi} unit="R$" />
+                  <NI label="VIDA ÚTIL" value={vu} onChange={sVu} unit="H" />
+                  <NI label="POTÊNCIA MÉDIA" value={pw} onChange={sPw} unit="W" />
+                  <NI label="CUSTO KWH" value={ckw} onChange={sCkw} unit="R$" />
+                  <SI label="TAXA DE FALHA" value={fp} onChange={sFp} />
+                </>
+              )}
+
+              {tab === "mdo" && (
+                <>
+                  <NI label="VALOR HORA" value={vhm} onChange={sVhm} unit="R$/H" />
+                  <NI label="SETUP" value={tsu} onChange={sTsu} unit="MIN" />
+                  <NI label="PÓS-PROCESSAMENTO" value={tpp} onChange={sTpp} unit="MIN" />
+                </>
+              )}
+
+              {tab === "arquivo" && (
+                <>
+                  <NI label="NOME DA PEÇA" value={nome} onChange={sNome} />
+                  <button onClick={doSave} style={{ width: "100%", padding: "16px", borderRadius: 12, background: "#30D158", color: "#FFF", border: "none", fontWeight: 800 }}>SALVAR NO ARQUIVO</button>
+                  <div style={{ marginTop: 20 }}>
+                    {arch.map(p => (
+                      <div key={p.id} style={{ padding: "12px", background: "#2C2C2E", borderRadius: 10, marginBottom: 8 }}>
+                        <div style={{ fontWeight: 800 }}>{p.nome}</div>
+                        <div style={{ color: "#30D158", fontSize: 12 }}>VENDA: {f(p.res.pVenda)} | LUCRO: {f(p.res.lucro)}</div>
+                        <button onClick={() => doLoad(p)} style={{ marginTop: 8, padding: "4px 8px", background: "#0A84FF", color: "#FFF", border: "none", borderRadius: 4, fontSize: 10 }}>CARREGAR</button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <footer style={{ textAlign: "center", marginTop: 24, color: "#48484A", fontSize: 11 }}>
+              CB²K PRESENTES 3D - TODOS OS DADOS EM CAIXA ALTA
+            </footer>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+  </script>
+</body>
+</html>
