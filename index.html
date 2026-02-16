@@ -1,224 +1,464 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CALCULADORA DE IMPRESSÃO 3D - CB²K</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖨️</text></svg>" />
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
-    body { background: #000000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #FFFFFF; text-transform: uppercase; }
-    input, select, textarea { text-transform: uppercase; }
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-thumb { background: #38383A; border-radius: 10px; }
-    input[type="range"] { -webkit-appearance: none; width: 100%; height: 4px; background: #38383A; border-radius: 2px; accent-color: #0A84FF; }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculadora de Impressão 3D</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖨️</text></svg>" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #12121e; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+  </style>
 </head>
 <body>
-  <div id="root"></div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
-  <script type="text/babel">
-    const { useState, useMemo, useEffect, useCallback } = React;
+  <div id="root"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+  <script type="text/babel">
+    const { useState, useMemo, useEffect, useCallback } = React;
 
-    const SK = "print3d-archive";
-    async function ldA() { try { const v = localStorage.getItem(SK); return v ? JSON.parse(v) : []; } catch { return []; } }
-    async function svA(items) { try { localStorage.setItem(SK, JSON.stringify(items)); } catch(e) { console.error(e); } }
+    // Storage via localStorage
+    const SK = "print3d-archive";
+    async function ldA() { try { const v = localStorage.getItem(SK); return v ? JSON.parse(v) : []; } catch { return []; } }
+    async function svA(items) { try { localStorage.setItem(SK, JSON.stringify(items)); } catch(e) { console.error(e); } }
 
-    const materialData = {
-      PLA: { pricePerKg: 120, density: 1.24, description: "MAIS COMUM, FÁCIL" },
-      ABS: { pricePerKg: 140, density: 1.04, description: "RESISTENTE, INDUSTRIAL" },
-      PETG: { pricePerKg: 150, density: 1.27, description: "RESISTENTE E FLEXÍVEL" },
-      TPU: { pricePerKg: 200, density: 1.21, description: "FLEXÍVEL, BORRACHUDO" },
-      NYLON: { pricePerKg: 280, density: 1.14, description: "ALTA RESISTÊNCIA" },
-      RESINA: { pricePerKg: 250, density: 1.10, description: "ALTA DEFINIÇÃO" },
-      ASA: { pricePerKg: 180, density: 1.07, description: "RESISTENTE A UV" },
-      PC: { pricePerKg: 300, density: 1.20, description: "POLICARBONATO" },
-    };
+    const materialData = {
+      PLA: { pricePerKg: 120, density: 1.24, description: "Mais comum, fácil de imprimir" },
+      ABS: { pricePerKg: 140, density: 1.04, description: "Resistente, uso industrial" },
+      PETG: { pricePerKg: 150, density: 1.27, description: "Resistente e flexível" },
+      TPU: { pricePerKg: 200, density: 1.21, description: "Flexível, borrachudo" },
+      Nylon: { pricePerKg: 280, density: 1.14, description: "Alta resistência mecânica" },
+      Resina: { pricePerKg: 250, density: 1.10, description: "Alta definição (SLA/DLP)" },
+      ASA: { pricePerKg: 180, density: 1.07, description: "Resistente a UV, uso externo" },
+      PC: { pricePerKg: 300, density: 1.20, description: "Policarbonato, alta resistência" },
+    };
+    const marketplacePresets = {
+      nenhum: { label: "Venda direta", taxa: 0, desc: "Sem marketplace" },
+      mercadolivre: { label: "Mercado Livre", taxa: 13, desc: "~11-16% s/ categoria" },
+      shopee: { label: "Shopee", taxa: 14, desc: "~12-18% + comissão" },
+      amazon: { label: "Amazon", taxa: 15, desc: "~8-20% s/ categoria" },
+      custom: { label: "Personalizado", taxa: 0, desc: "Defina sua taxa" },
+    };
+    const statusOptions = [
+      { id: "verificada", label: "Verificada", color: "#00d4aa", icon: "✅" },
+      { id: "pendente", label: "Pendente", color: "#ffd43b", icon: "⏳" },
+      { id: "problema", label: "Problema", color: "#ff6b6b", icon: "⚠️" },
+      { id: "favorita", label: "Favorita", color: "#e599f7", icon: "⭐" },
+    ];
 
-    const marketplacePresets = {
-      NENHUM: { label: "VENDA DIRETA", taxa: 0, desc: "SEM MARKETPLACE" },
-      MERCADOLIVRE: { label: "MERCADO LIVRE", taxa: 13, desc: "~11-16% S/ CATEGORIA" },
-      SHOPEE: { label: "SHOPEE", taxa: 14, desc: "~12-18% + COMISSÃO" },
-      AMAZON: { label: "AMAZON", taxa: 15, desc: "~8-20% S/ CATEGORIA" },
-      CUSTOM: { label: "PERSONALIZADO", taxa: 0, desc: "DEFINA SUA TAXA" },
-    };
+    function NI({ label, value, onChange, unit, step = 1, min = 0, helpText }) {
+      return React.createElement("div", { style: { marginBottom: 16 } },
+        React.createElement("label", { style: { display: "block", fontSize: 13, fontWeight: 600, color: "#c0c0c0", marginBottom: 6, letterSpacing: "0.5px", textTransform: "uppercase" } }, label),
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } },
+          React.createElement("input", { type: "number", value, onChange: (e) => onChange(parseFloat(e.target.value) || 0), step, min,
+            style: { flex: 1, padding: "10px 14px", borderRadius: 10, border: "1px solid #3a3a4a", background: "#1e1e2e", color: "#f0f0f0", fontSize: 16, outline: "none" },
+            onFocus: (e) => (e.target.style.borderColor = "#7c5cfc"), onBlur: (e) => (e.target.style.borderColor = "#3a3a4a") }),
+          unit && React.createElement("span", { style: { color: "#888", fontSize: 14, minWidth: 30 } }, unit)
+        ),
+        helpText && React.createElement("span", { style: { fontSize: 11, color: "#666", marginTop: 4, display: "block" } }, helpText)
+      );
+    }
+    function SI({ label, value, onChange, min, max, step = 1, unit = "%", helpText }) {
+      return React.createElement("div", { style: { marginBottom: 16 } },
+        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 } },
+          React.createElement("label", { style: { fontSize: 13, fontWeight: 600, color: "#c0c0c0", letterSpacing: "0.5px", textTransform: "uppercase" } }, label),
+          React.createElement("span", { style: { fontSize: 15, fontWeight: 700, color: "#7c5cfc" } }, value + unit)
+        ),
+        React.createElement("input", { type: "range", min, max, step, value, onChange: (e) => onChange(parseFloat(e.target.value)), style: { width: "100%", accentColor: "#7c5cfc" } }),
+        helpText && React.createElement("span", { style: { fontSize: 11, color: "#666", marginTop: 2, display: "block" } }, helpText)
+      );
+    }
+    function CC({ label, value, icon, color = "#7c5cfc", sub }) {
+      return (<div style={{ background: "linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%)", borderRadius: 14, padding: "14px 16px", border: `1px solid ${color}22`, flex: 1, minWidth: 120 }}>
+        <div style={{ fontSize: 20, marginBottom: 4 }}>{icon}</div>
+        <div style={{ fontSize: 10, color: "#888", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 3 }}>{label}</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color }}>{value}</div>
+        {sub && <div style={{ fontSize: 10, color: "#666", marginTop: 3 }}>{sub}</div>}
+      </div>);
+    }
 
-    const statusOptions = [
-      { id: "verificada", label: "VERIFICADA", color: "#30D158", icon: "✅" },
-      { id: "pendente", label: "PENDENTE", color: "#FFD60A", icon: "⏳" },
-      { id: "problema", label: "PROBLEMA", color: "#FF453A", icon: "⚠️" },
-      { id: "favorita", label: "FAVORITA", color: "#AF52DE", icon: "⭐" },
-    ];
+    function App() {
+      const [pg, sPg] = useState(50), [th, sTh] = useState(4), [tm, sTm] = useState(30), [mat, sMat] = useState("PLA");
+      const [ci, sCi] = useState(3000), [vu, sVu] = useState(5000), [pw, sPw] = useState(250), [ckw, sCkw] = useState(0.85);
+      const [inf, sInf] = useState(20), [fp, sFp] = useState(5);
+      const [lix, sLix] = useState(false), [pin, sPin] = useState(false), [acab, sAcab] = useState(false), [sup, sSup] = useState(true);
+      const [vhm, sVhm] = useState(30), [tsu, sTsu] = useState(15), [tpp, sTpp] = useState(20);
+      const [ml, sMl] = useState(50), [qtd, sQtd] = useState(1), [cfm, sCfm] = useState(200), [hm, sHm] = useState(200);
+      const [ff, sFf] = useState(15), [fpc, sFpc] = useState(true), [ce, sCe] = useState(3);
+      const [rt, sRt] = useState("mei"), [ac, sAc] = useState(6);
+      const [mk, sMk] = useState("nenhum"), [tmc, sTmc] = useState(15), [tfm, sTfm] = useState(0);
+      const [tab, sTab] = useState("peca");
+      const [arch, sArch] = useState([]), [aLoad, sALoad] = useState(true);
+      const [nome, sNome] = useState(""), [notas, sNotas] = useState(""), [status, sStatus] = useState("verificada");
+      const [search, sSearch] = useState(""), [filt, sFilt] = useState("todos"), [sort, sSort] = useState("data");
+      const [cdel, sCdel] = useState(null), [saved, sSaved] = useState(false);
 
-    function NI({ label, value, onChange, unit, step = 1, min = 0 }) {
-      return (
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", fontSize: 11, fontWeight: "700", color: "#8E8E93", marginBottom: 6 }}>{label}</label>
-          <div style={{ display: "flex", alignItems: "center", background: "#1C1C1E", borderRadius: 10, padding: "8px 12px", border: "0.5px solid #38383A" }}>
-            <input type="number" value={value} onChange={(e) => onChange(parseFloat(e.target.value) || 0)} step={step} min={min}
-              style={{ flex: 1, background: "transparent", border: "none", color: "#FFFFFF", fontSize: 16, outline: "none" }} />
-            {unit && <span style={{ color: "#8E8E93", fontSize: 14 }}>{unit}</span>}
-          </div>
-        </div>
-      );
-    }
+      useEffect(() => { ldA().then(i => { sArch(i); sALoad(false); }); }, []);
 
-    function CC({ label, value, icon, color = "#0A84FF", sub }) {
-      return (
-        <div style={{ background: "#1C1C1E", borderRadius: 14, padding: "14px", border: "0.5px solid #38383A", flex: 1, minWidth: 120 }}>
-          <div style={{ fontSize: 18, marginBottom: 4 }}>{icon}</div>
-          <div style={{ fontSize: 9, color: "#8E8E93", fontWeight: "700" }}>{label}</div>
-          <div style={{ fontSize: 16, fontWeight: "800", color }}>{value}</div>
-          {sub && <div style={{ fontSize: 9, color: "#636366", marginTop: 2 }}>{sub}</div>}
-        </div>
-      );
-    }
+      const aImp = useMemo(() => ({ mei:5, simples:6, presumido:11.33, real:15, informal:0, custom:ac })[rt] ?? 5, [rt, ac]);
+      const tMk = useMemo(() => mk === "nenhum" ? 0 : mk === "custom" ? tmc : marketplacePresets[mk].taxa, [mk, tmc]);
 
-    function App() {
-      const [pg, sPg] = useState(50), [th, sTh] = useState(4), [tm, sTm] = useState(30), [mat, sMat] = useState("PLA");
-      const [ci, sCi] = useState(3000), [vu, sVu] = useState(5000), [pw, sPw] = useState(250), [ckw, sCkw] = useState(0.85);
-      const [inf, sInf] = useState(20), [fp, sFp] = useState(5);
-      const [lix, sLix] = useState(false), [pin, sPin] = useState(false), [acab, sAcab] = useState(false), [sup, sSup] = useState(true);
-      const [vhm, sVhm] = useState(30), [tsu, sTsu] = useState(15), [tpp, sTpp] = useState(20);
-      const [ml, sMl] = useState(50), [qtd, sQtd] = useState(1), [cfm, sCfm] = useState(200), [hm, sHm] = useState(200);
-      const [ff, sFf] = useState(15), [fpc, sFpc] = useState(true), [ce, sCe] = useState(3);
-      const [rt, sRt] = useState("mei"), [ac, sAc] = useState(6), [mk, sMk] = useState("NENHUM"), [tmc, sTmc] = useState(15), [tfm, sTfm] = useState(0);
-      const [tab, sTab] = useState("peca"), [arch, sArch] = useState([]), [nome, sNome] = useState(""), [notas, sNotas] = useState(""), [status, sStatus] = useState("verificada");
+      const c = useMemo(() => {
+        const m = materialData[mat], tH = th + tm / 60;
+        const cMat = (pg / 1000) * m.pricePerKg, cEn = (pw / 1000) * tH * ckw, dep = (ci / vu) * tH;
+        const cMdo = ((tsu + tpp) / 60) * vhm;
+        let cPos = 0; if (lix) cPos += 2.5; if (pin) cPos += 8; if (acab) cPos += 5; if (sup) cPos += 1.5;
+        const cFalha = (cMat + cEn) * (fp / 100), rCF = (cfm / hm) * tH, cEmb = ce, cFr = fpc ? 0 : ff;
+        const cProd = cMat + cEn + dep + cMdo + cPos + cFalha + rCF + cEmb + cFr;
+        const pBase = cProd * (1 + ml / 100), tTx = (tMk / 100) + (aImp / 100);
+        const pFin = tTx < 1 ? pBase / (1 - tTx) : pBase * 2;
+        const vImp = pFin * (aImp / 100), vMk = pFin * (tMk / 100) + tfm;
+        const cTot = cProd + vImp + vMk, lucro = pFin - cTot;
+        return { cMat, cEn, dep, cMdo, cPos, cFalha, rCF, cEmb, cFr, cProd, vImp, vMk, cTot, pVenda: pFin, lucro,
+          cTotLote: cTot * qtd, pVendaLote: pFin * qtd, lucroLote: lucro * qtd, tH, pesoTot: pg * qtd,
+          mReal: cTot > 0 ? (lucro / cTot * 100) : 0 };
+      }, [pg, th, tm, mat, ci, vu, pw, ckw, inf, fp, lix, pin, acab, sup, vhm, tsu, tpp, ml, qtd, cfm, hm, ff, fpc, ce, aImp, tMk, tfm]);
 
-      useEffect(() => { ldA().then(sArch); }, []);
+      const doSave = useCallback(async () => {
+        if (!nome.trim()) return;
+        const np = { id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), nome: nome.trim(), notas: notas.trim(), status, data: new Date().toISOString(),
+          params: { pg, th, tm, mat, inf, qtd, lix, pin, acab, sup, mk, rt, ml, fpc, ff, ce },
+          res: { cProd: c.cProd, cTot: c.cTot, pVenda: c.pVenda, lucro: c.lucro, mReal: c.mReal } };
+        const u = [np, ...arch]; sArch(u); await svA(u); sNome(""); sNotas(""); sSaved(true); setTimeout(() => sSaved(false), 2000);
+      }, [nome, notas, status, pg, th, tm, mat, inf, qtd, lix, pin, acab, sup, mk, rt, ml, fpc, ff, ce, c, arch]);
 
-      const c = useMemo(() => {
-        const m = materialData[mat] || materialData.PLA, tH = th + tm / 60;
-        const cMat = (pg / 1000) * m.pricePerKg, cEn = (pw / 1000) * tH * ckw, dep = (ci / vu) * tH;
-        const cMdo = ((tsu + tpp) / 60) * vhm;
-        let cPos = 0; if (lix) cPos += 2.5; if (pin) cPos += 8; if (acab) cPos += 5; if (sup) cPos += 1.5;
-        const cFalha = (cMat + cEn) * (fp / 100), rCF = (cfm / hm) * tH;
-        const cProd = cMat + cEn + dep + cMdo + cPos + cFalha + rCF + ce + (fpc ? 0 : ff);
-        const pBase = cProd * (1 + ml / 100);
-        const aImp = { mei:5, simples:6, presumido:11.33, real:15, informal:0, custom:ac }[rt] ?? 5;
-        const tMk = mk === "NENHUM" ? 0 : mk === "CUSTOM" ? tmc : marketplacePresets[mk].taxa;
-        const tTx = (tMk / 100) + (aImp / 100);
-        const pFin = tTx < 1 ? pBase / (1 - tTx) : pBase * 2;
-        return { cProd, cTot: cProd + (pFin * tTx) + tfm, pVenda: pFin, lucro: pFin - (cProd + (pFin * tTx) + tfm), mReal: ((pFin - cProd) / pFin) * 100 };
-      }, [pg, th, tm, mat, ci, vu, pw, ckw, fp, lix, pin, acab, sup, vhm, tsu, tpp, ml, cfm, hm, ff, fpc, ce, rt, mk, tmc, tfm, ac]);
+      const doDelete = useCallback(async (id) => { const u = arch.filter(p => p.id !== id); sArch(u); await svA(u); sCdel(null); }, [arch]);
+      const doLoad = useCallback((p) => {
+        const d = p.params; sPg(d.pg); sTh(d.th); sTm(d.tm); sMat(d.mat); sInf(d.inf); sQtd(d.qtd);
+        sLix(d.lix); sPin(d.pin); sAcab(d.acab); sSup(d.sup); sMk(d.mk); sRt(d.rt); sMl(d.ml); sFpc(d.fpc); sFf(d.ff); sCe(d.ce); sTab("peca");
+      }, []);
+      const doStatus = useCallback(async (id, ns) => { const u = arch.map(p => p.id === id ? {...p, status: ns} : p); sArch(u); await svA(u); }, [arch]);
+      const doClear = useCallback(async () => { sArch([]); await svA([]); sCdel(null); }, []);
 
-      const doSave = async () => {
-        if (!nome) return;
-        const n = { id: Date.now().toString(), nome, status, data: new Date().toISOString(), res: { ...c }, params: { mat, pg } };
-        const u = [n, ...arch]; sArch(u); await svA(u); sNome("");
-      };
+      const fArch = useMemo(() => {
+        let it = arch;
+        if (filt !== "todos") it = it.filter(p => p.status === filt);
+        if (search.trim()) { const q = search.toLowerCase(); it = it.filter(p => p.nome.toLowerCase().includes(q) || (p.notas||"").toLowerCase().includes(q) || p.params.mat.toLowerCase().includes(q)); }
+        if (sort === "data") it = [...it].sort((a,b) => new Date(b.data)-new Date(a.data));
+        else if (sort === "nome") it = [...it].sort((a,b) => a.nome.localeCompare(b.nome));
+        else if (sort === "preco") it = [...it].sort((a,b) => b.res.pVenda-a.res.pVenda);
+        else if (sort === "lucro") it = [...it].sort((a,b) => b.res.lucro-a.res.lucro);
+        return it;
+      }, [arch, filt, search, sort]);
 
-      const f = v => `R$ ${v.toFixed(2)}`;
+      const aStats = useMemo(() => !arch.length ? null : ({
+        total: arch.length, verif: arch.filter(p => p.status === "verificada").length,
+        receita: arch.reduce((s,p) => s + p.res.pVenda*(p.params.qtd||1), 0),
+        lucro: arch.reduce((s,p) => s + p.res.lucro*(p.params.qtd||1), 0),
+      }), [arch]);
 
-      return (
-        <div style={{ maxWidth: 800, margin: "0 auto", padding: "20px" }}>
-          <header style={{ textAlign: "center", marginBottom: 25 }}>
-            <h1 style={{ fontSize: 24, fontWeight: "900" }}>CALCULADORA CB²K</h1>
-            <p style={{ color: "#0A84FF", fontSize: 11, fontWeight: "700" }}>SISTEMA OPERACIONAL V1.0</p>
-          </header>
+      const f = v => `R$ ${v.toFixed(2)}`;
+      const tabs = [
+        { id:"peca", label:"🎯 Peça" }, { id:"custos", label:"⚡ Operação" }, { id:"mdo", label:"👷 Mão de Obra" },
+        { id:"acabamento", label:"✨ Acabamento" }, { id:"venda", label:"📦 Venda" }, { id:"negocio", label:"💼 Negócio" },
+        { id:"arquivo", label:`🗂️ Arquivo (${arch.length})` },
+      ];
+      const bdi = [
+        { l:"Material", v:c.cMat, cl:"#7c5cfc" }, { l:"Energia", v:c.cEn, cl:"#00d4aa" }, { l:"Depreciação", v:c.dep, cl:"#ff6b6b" },
+        { l:"Mão de obra", v:c.cMdo, cl:"#ffa94d" }, { l:"Pós-proc.", v:c.cPos, cl:"#74c0fc" }, { l:"Falhas", v:c.cFalha, cl:"#e599f7" },
+        { l:"Custos fixos", v:c.rCF, cl:"#69db7c" }, { l:"Embalagem", v:c.cEmb, cl:"#d0bfff" }, { l:"Frete", v:c.cFr, cl:"#a9e34b" },
+        { l:"Impostos", v:c.vImp, cl:"#ff8787" }, { l:"Marketplace", v:c.vMk, cl:"#ffd43b" },
+      ].filter(i => i.v > 0);
+      const isA = tab === "arquivo";
 
-          <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
-            <CC icon="🏗️" label="CUSTO PROD." value={f(c.cProd)} color="#FF453A" />
-            <CC icon="🏷️" label="PREÇO VENDA" value={f(c.pVenda)} color="#0A84FF" />
-            <CC icon="📈" label="LUCRO LÍQ." value={f(c.lucro)} color="#30D158" />
-          </div>
+      const Btn = ({children, active, color="#7c5cfc", onClick}) => (
+        <button onClick={onClick} style={{ padding:"8px 14px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:600, border: active ? `2px solid ${color}` : "1px solid #3a3a4a", background: active ? `${color}18` : "#1e1e2e", color: active ? color : "#888" }}>{children}</button>
+      );
 
-          <div style={{ display: "flex", gap: 5, overflowX: "auto", marginBottom: 20, paddingBottom: 5 }}>
-            {["peca", "custos", "mdo", "acabamento", "venda", "arquivo"].map(t => (
-              <button key={t} onClick={() => sTab(t)} style={{
-                padding: "10px 15px", borderRadius: 12, border: "none", fontSize: 10, fontWeight: "800",
-                background: tab === t ? "#0A84FF" : "#1C1C1E", color: "#FFF", whiteSpace: "nowrap"
-              }}>{t}</button>
-            ))}
-          </div>
+      return (
+        <div style={{ minHeight:"100vh", background:"#12121e", color:"#f0f0f0", fontFamily:"'Inter',-apple-system,sans-serif" }}>
+          <div style={{ maxWidth:920, margin:"0 auto", padding:"24px 16px" }}>
+            <div style={{ textAlign:"center", marginBottom:28 }}>
+              <div style={{ fontSize:38, marginBottom:4 }}>🖨️</div>
+              <h1 style={{ fontSize:26, fontWeight:800, margin:0, background:"linear-gradient(135deg,#7c5cfc,#00d4aa)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>Calculadora de Impressão 3D</h1>
+              <p style={{ color:"#666", fontSize:14, marginTop:6 }}>Calcule todos os custos e precifique suas peças</p>
+            </div>
 
-          <div style={{ background: "#1C1C1E", borderRadius: 20, padding: "20px", border: "0.5px solid #38383A" }}>
-            {tab === "peca" && (
-              <>
-                <NI label="PESO DA PEÇA (G)" value={pg} onChange={sPg} unit="G" />
-                <div style={{ display: "flex", gap: 10 }}>
-                  <NI label="HORAS" value={th} onChange={sTh} />
-                  <NI label="MINUTOS" value={tm} onChange={sTm} />
-                </div>
-                <label style={{ display: "block", fontSize: 11, color: "#8E8E93", marginBottom: 10 }}>MATERIAL</label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  {Object.keys(materialData).map(m => (
-                    <button key={m} onClick={() => sMat(m)} style={{
-                      padding: "12px", borderRadius: 10, border: mat === m ? "2px solid #0A84FF" : "1px solid #38383A",
-                      background: mat === m ? "rgba(10, 132, 255, 0.1)" : "transparent", color: "#FFF", fontSize: 11, fontWeight: "700"
-                    }}>{m}</button>
-                  ))}
-                </div>
-              </>
-            )}
+            {!isA && <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:24 }}>
+              <CC icon="🏭" label="Custo Produção" value={f(c.cProd)} color="#ff6b6b" sub="Sem impostos/taxas" />
+              <CC icon="💰" label="Custo Total" value={f(c.cTot)} color="#ffa94d" sub={`${qtd}x = ${f(c.cTotLote)}`} />
+              <CC icon="🏷️" label="Preço Venda" value={f(c.pVenda)} color="#00d4aa" sub={`Margem: ${c.mReal.toFixed(1)}%`} />
+              <CC icon="📈" label="Lucro Líquido" value={f(c.lucro)} color="#7c5cfc" sub={`Total: ${f(c.lucroLote)}`} />
+            </div>}
+            {isA && aStats && <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:24 }}>
+              <CC icon="🗂️" label="Total Peças" value={aStats.total} color="#7c5cfc" sub={`${aStats.verif} verificadas`} />
+              <CC icon="💰" label="Receita Potencial" value={f(aStats.receita)} color="#00d4aa" sub="Todas as peças" />
+              <CC icon="📈" label="Lucro Potencial" value={f(aStats.lucro)} color="#ffa94d" sub="Todas as peças" />
+            </div>}
 
-            {tab === "custos" && (
-              <>
-                <NI label="VALOR DA IMPRESSORA" value={ci} onChange={sCi} unit="R$" />
-                <NI label="VIDA ÚTIL (HORAS)" value={vu} onChange={sVu} unit="H" />
-                <NI label="POTÊNCIA (W)" value={pw} onChange={sPw} unit="W" />
-                <NI label="CUSTO KWH" value={ckw} onChange={sCkw} unit="R$" />
-                <NI label="TAXA DE FALHA (%)" value={fp} onChange={sFp} unit="%" />
-              </>
-            )}
+            <div style={{ display:"flex", gap:4, marginBottom:20, overflowX:"auto", paddingBottom:4 }}>
+              {tabs.map(t => <button key={t.id} onClick={() => sTab(t.id)} style={{
+                padding:"10px 16px", borderRadius:10, border:"none", fontSize:13, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap",
+                background: tab===t.id ? (t.id==="arquivo"?"linear-gradient(135deg,#00d4aa,#0a9d80)":"linear-gradient(135deg,#7c5cfc,#5a3fd4)") : "#1e1e2e",
+                color: tab===t.id ? "#fff" : "#888",
+              }}>{t.label}</button>)}
+            </div>
 
-            {tab === "mdo" && (
-              <>
-                <NI label="VALOR DA SUA HORA" value={vhm} onChange={sVhm} unit="R$/H" />
-                <NI label="MINUTOS SETUP" value={tsu} onChange={sTsu} />
-                <NI label="MINUTOS PÓS-PROC." value={tpp} onChange={sTpp} />
-                <label style={{ display: "block", fontSize: 11, color: "#8E8E93", marginBottom: 10 }}>MARGEM DE LUCRO: {ml}%</label>
-                <input type="range" min="0" max="200" value={ml} onChange={e => sMl(e.target.value)} />
-              </>
-            )}
+            {isA ? (
+              <div style={{ display:"flex", gap:20, flexWrap:"wrap" }}>
+                <div style={{ flex:1, minWidth:300 }}>
+                  <div style={{ background:"#1a1a2e", borderRadius:16, padding:24, border:"1px solid #2a2a3e", marginBottom:20 }}>
+                    <h3 style={{ margin:"0 0 18px", fontSize:16, color:"#00d4aa" }}>💾 Salvar Peça Atual</h3>
+                    <div style={{ marginBottom:16 }}>
+                      <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#c0c0c0", marginBottom:6, textTransform:"uppercase" }}>Nome da peça *</label>
+                      <input type="text" value={nome} onChange={e => sNome(e.target.value)} placeholder="Ex: Suporte celular v2"
+                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, border:"1px solid #3a3a4a", background:"#1e1e2e", color:"#f0f0f0", fontSize:15, outline:"none", boxSizing:"border-box" }} />
+                    </div>
+                    <div style={{ marginBottom:16 }}>
+                      <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#c0c0c0", marginBottom:8, textTransform:"uppercase" }}>Status</label>
+                      <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                        {statusOptions.map(s => <Btn key={s.id} active={status===s.id} color={s.color} onClick={() => sStatus(s.id)}>{s.icon} {s.label}</Btn>)}
+                      </div>
+                    </div>
+                    <div style={{ marginBottom:16 }}>
+                      <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#c0c0c0", marginBottom:6, textTransform:"uppercase" }}>Observações</label>
+                      <textarea value={notas} onChange={e => sNotas(e.target.value)} placeholder="Anotações, configs do slicer..." rows={3}
+                        style={{ width:"100%", padding:"10px 14px", borderRadius:10, border:"1px solid #3a3a4a", background:"#1e1e2e", color:"#f0f0f0", fontSize:14, outline:"none", resize:"vertical", boxSizing:"border-box", fontFamily:"inherit" }} />
+                    </div>
+                    <div style={{ padding:14, background:"#12121e", borderRadius:10, border:"1px solid #2a2a3e", marginBottom:16 }}>
+                      <div style={{ fontSize:12, color:"#888", marginBottom:8 }}>Resumo</div>
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6, fontSize:12 }}>
+                        {[["Material", mat, "#7c5cfc"], ["Peso", pg+"g", "#f0f0f0"], ["Tempo", `${th}h${tm}m`, "#f0f0f0"], ["Qtd", qtd+"x", "#f0f0f0"],
+                          ["Custo", f(c.cTot), "#ff6b6b"], ["Venda", f(c.pVenda), "#00d4aa"], ["Lucro", f(c.lucro), "#7c5cfc"], ["Margem", c.mReal.toFixed(1)+"%", "#ffa94d"]
+                        ].map(([k,v,cl]) => <div key={k}><span style={{ color:"#666" }}>{k}: </span><span style={{ color:cl, fontWeight:600 }}>{v}</span></div>)}
+                      </div>
+                    </div>
+                    <button onClick={doSave} disabled={!nome.trim()} style={{
+                      width:"100%", padding:14, borderRadius:12, border:"none", fontSize:15, fontWeight:700,
+                      cursor: nome.trim() ? "pointer" : "not-allowed",
+                      background: nome.trim() ? (saved ? "#00d4aa" : "linear-gradient(135deg,#00d4aa,#0a9d80)") : "#2a2a3e",
+                      color: nome.trim() ? "#fff" : "#555",
+                    }}>{saved ? "✅ Salva!" : "💾 Salvar no Arquivo"}</button>
+                  </div>
+                  {arch.length > 0 && <div style={{ padding:16, background:"#1a1a2e", borderRadius:12, border:"1px solid #ff6b6b33" }}>
+                    <div style={{ fontSize:12, color:"#ff6b6b", marginBottom:8, fontWeight:600 }}>⚠️ Zona de perigo</div>
+                    {cdel === "all" ? <div style={{ display:"flex", gap:8 }}>
+                      <button onClick={doClear} style={{ flex:1, padding:10, borderRadius:8, border:"none", background:"#ff6b6b", color:"#fff", fontWeight:600, cursor:"pointer", fontSize:13 }}>Confirmar apagar tudo</button>
+                      <button onClick={() => sCdel(null)} style={{ flex:1, padding:10, borderRadius:8, border:"1px solid #3a3a4a", background:"#1e1e2e", color:"#888", cursor:"pointer", fontSize:13 }}>Cancelar</button>
+                    </div> : <button onClick={() => sCdel("all")} style={{ width:"100%", padding:10, borderRadius:8, border:"1px solid #ff6b6b44", background:"transparent", color:"#ff6b6b", fontWeight:600, cursor:"pointer", fontSize:13 }}>🗑️ Limpar arquivo ({arch.length} peças)</button>}
+                  </div>}
+                </div>
 
-            {tab === "venda" && (
-              <>
-                <NI label="EMBALAGEM" value={ce} onChange={sCe} unit="R$" />
-                <NI label="FRETE" value={ff} onChange={sFf} unit="R$" />
-                <label style={{ display: "block", fontSize: 11, color: "#8E8E93", marginBottom: 10 }}>IMPOSTO (REGIME)</label>
-                <select value={rt} onChange={e => sRt(e.target.value)} style={{ width: "100%", padding: "12px", borderRadius: 10, background: "#2C2C2E", color: "#FFF", border: "none", marginBottom: 15 }}>
-                  <option value="mei">MEI (~5%)</option>
-                  <option value="simples">SIMPLES (~6%)</option>
-                  <option value="informal">INFORMAL (0%)</option>
-                </select>
-                <label style={{ display: "block", fontSize: 11, color: "#8E8E93", marginBottom: 10 }}>MARKETPLACE</label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  {Object.keys(marketplacePresets).map(m => (
-                    <button key={m} onClick={() => sMk(m)} style={{
-                      padding: "10px", borderRadius: 10, border: mk === m ? "2px solid #FFD60A" : "1px solid #38383A",
-                      background: mk === m ? "rgba(255, 214, 10, 0.1)" : "transparent", color: "#FFF", fontSize: 10, fontWeight: "700"
-                    }}>{m}</button>
-                  ))}
-                </div>
-              </>
-            )}
+                <div style={{ flex:1, minWidth:300 }}>
+                  <div style={{ background:"#1a1a2e", borderRadius:16, padding:24, border:"1px solid #2a2a3e" }}>
+                    <h3 style={{ margin:"0 0 16px", fontSize:16, color:"#f0f0f0" }}>🗂️ Peças Arquivadas</h3>
+                    <input type="text" value={search} onChange={e => sSearch(e.target.value)} placeholder="🔍 Buscar por nome, nota ou material..."
+                      style={{ width:"100%", padding:"10px 14px", borderRadius:10, border:"1px solid #3a3a4a", background:"#12121e", color:"#f0f0f0", fontSize:14, outline:"none", boxSizing:"border-box", marginBottom:10 }} />
+                    <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:8 }}>
+                      <Btn active={filt==="todos"} onClick={() => sFilt("todos")}>Todos</Btn>
+                      {statusOptions.map(s => <Btn key={s.id} active={filt===s.id} color={s.color} onClick={() => sFilt(s.id)}>{s.icon} {s.label}</Btn>)}
+                    </div>
+                    <div style={{ display:"flex", gap:4, alignItems:"center", marginBottom:16 }}>
+                      <span style={{ fontSize:11, color:"#555", marginRight:4 }}>Ordenar:</span>
+                      {[["data","Recente"],["nome","A-Z"],["preco","Preço"],["lucro","Lucro"]].map(([id,lb]) => (
+                        <button key={id} onClick={() => sSort(id)} style={{ padding:"4px 10px", borderRadius:6, fontSize:11, fontWeight:600, cursor:"pointer", border: sort===id ? "1px solid #7c5cfc" : "1px solid #2a2a3e", background: sort===id ? "#7c5cfc18" : "transparent", color: sort===id ? "#7c5cfc" : "#555" }}>{lb}</button>
+                      ))}
+                    </div>
+                    {aLoad ? <div style={{ textAlign:"center", padding:40, color:"#555" }}>Carregando...</div>
+                    : fArch.length === 0 ? <div style={{ textAlign:"center", padding:40 }}>
+                        <div style={{ fontSize:40, marginBottom:12 }}>📭</div>
+                        <div style={{ color:"#555", fontSize:14 }}>{arch.length === 0 ? "Nenhuma peça salva" : "Sem resultados"}</div>
+                      </div>
+                    : <div style={{ display:"flex", flexDirection:"column", gap:10, maxHeight:520, overflowY:"auto" }}>
+                      {fArch.map(p => {
+                        const st = statusOptions.find(s => s.id === p.status) || statusOptions[0];
+                        const dt = new Date(p.data).toLocaleDateString("pt-BR",{day:"2-digit",month:"short",year:"2-digit"});
+                        return (<div key={p.id} style={{ padding:16, background:"#12121e", borderRadius:12, border:`1px solid ${st.color}33` }}>
+                          <div style={{ marginBottom:10 }}>
+                            <div style={{ fontSize:15, fontWeight:700, color:"#f0f0f0", marginBottom:4 }}>{p.nome}</div>
+                            <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+                              <span style={{ fontSize:11, color:st.color, fontWeight:600, background:`${st.color}18`, padding:"2px 8px", borderRadius:4 }}>{st.icon} {st.label}</span>
+                              <span style={{ fontSize:11, color:"#555" }}>{dt}</span>
+                              <span style={{ fontSize:11, color:"#7c5cfc", fontWeight:600 }}>{p.params.mat}</span>
+                              <span style={{ fontSize:11, color:"#888" }}>{p.params.pg}g</span>
+                            </div>
+                          </div>
+                          {p.notas && <div style={{ fontSize:12, color:"#777", marginBottom:10, fontStyle:"italic" }}>"{p.notas}"</div>}
+                          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:12 }}>
+                            {[["Custo",p.res.cTot,"#ff6b6b"],["Venda",p.res.pVenda,"#00d4aa"],["Lucro",p.res.lucro,"#7c5cfc"]].map(([lb,v,cl]) => (
+                              <div key={lb} style={{ textAlign:"center", padding:8, background:"#1a1a2e", borderRadius:8 }}>
+                                <div style={{ fontSize:10, color:"#666" }}>{lb}</div>
+                                <div style={{ fontSize:14, fontWeight:700, color:cl }}>{f(v)}</div>
+                              </div>
+                            ))}
+                          </div>
+                          <div style={{ display:"flex", gap:4, marginBottom:10, flexWrap:"wrap" }}>
+                            {statusOptions.map(s => <button key={s.id} onClick={() => doStatus(p.id, s.id)} style={{ padding:"4px 8px", borderRadius:4, fontSize:10, cursor:"pointer", fontWeight:600, border: p.status===s.id ? `1px solid ${s.color}` : "1px solid #2a2a3e", background: p.status===s.id ? `${s.color}22` : "transparent", color: p.status===s.id ? s.color : "#444" }}>{s.icon}</button>)}
+                          </div>
+                          <div style={{ display:"flex", gap:8 }}>
+                            <button onClick={() => doLoad(p)} style={{ flex:1, padding:8, borderRadius:8, border:"1px solid #7c5cfc44", background:"#7c5cfc12", color:"#7c5cfc", fontSize:12, fontWeight:600, cursor:"pointer" }}>📋 Carregar</button>
+                            {cdel === p.id ? <div style={{ display:"flex", gap:4 }}>
+                              <button onClick={() => doDelete(p.id)} style={{ padding:"8px 12px", borderRadius:8, border:"none", background:"#ff6b6b", color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}>Sim</button>
+                              <button onClick={() => sCdel(null)} style={{ padding:"8px 12px", borderRadius:8, border:"1px solid #3a3a4a", background:"#1e1e2e", color:"#888", fontSize:12, cursor:"pointer" }}>Não</button>
+                            </div> : <button onClick={() => sCdel(p.id)} style={{ padding:"8px 12px", borderRadius:8, border:"1px solid #ff6b6b33", background:"transparent", color:"#ff6b6b88", fontSize:12, cursor:"pointer" }}>🗑️</button>}
+                          </div>
+                        </div>);
+                      })}
+                    </div>}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display:"flex", gap:20, flexWrap:"wrap" }}>
+                <div style={{ flex:1, minWidth:300 }}>
+                  <div style={{ background:"#1a1a2e", borderRadius:16, padding:24, border:"1px solid #2a2a3e" }}>
+                    {tab === "peca" && <>
+                      <h3 style={{ margin:"0 0 18px", fontSize:16 }}>📐 Dados da Peça</h3>
+                      <div style={{ marginBottom:16 }}>
+                        <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#c0c0c0", marginBottom:6, textTransform:"uppercase" }}>Material</label>
+                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                          {Object.entries(materialData).map(([k,m]) => (
+                            <button key={k} onClick={() => sMat(k)} style={{ padding:"10px 12px", borderRadius:10, textAlign:"left", cursor:"pointer",
+                              border: mat===k ? "2px solid #7c5cfc" : "1px solid #3a3a4a", background: mat===k ? "#7c5cfc18" : "#1e1e2e", color: mat===k ? "#7c5cfc" : "#aaa", fontSize:13, fontWeight:600 }}>
+                              <div>{k}</div><div style={{ fontSize:10, color:"#666", marginTop:2 }}>{m.description}</div><div style={{ fontSize:10, color:"#7c5cfc", marginTop:2 }}>R$ {m.pricePerKg}/kg</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <NI label="Peso da peça" value={pg} onChange={sPg} unit="g" helpText="Peso estimado pelo slicer" />
+                      <div style={{ display:"flex", gap:12 }}><div style={{ flex:1 }}><NI label="Horas" value={th} onChange={sTh} unit="h" /></div><div style={{ flex:1 }}><NI label="Min" value={tm} onChange={sTm} unit="min" /></div></div>
+                      <SI label="Infill" value={inf} onChange={sInf} min={5} max={100} step={5} helpText="Preenchimento" />
+                      <NI label="Quantidade" value={qtd} onChange={sQtd} unit="un" min={1} />
+                    </>}
+                    {tab === "custos" && <>
+                      <h3 style={{ margin:"0 0 18px", fontSize:16 }}>⚡ Custos Operacionais</h3>
+                      <NI label="Custo da impressora" value={ci} onChange={sCi} unit="R$" step={100} helpText="Valor de compra" />
+                      <NI label="Vida útil" value={vu} onChange={sVu} unit="h" step={100} />
+                      <NI label="Potência" value={pw} onChange={sPw} unit="W" step={10} />
+                      <NI label="Custo kWh" value={ckw} onChange={sCkw} unit="R$/kWh" step={0.01} helpText="Veja na conta de luz" />
+                      <SI label="Taxa de falha" value={fp} onChange={sFp} min={0} max={30} />
+                    </>}
+                    {tab === "mdo" && <>
+                      <h3 style={{ margin:"0 0 18px", fontSize:16 }}>👷 Mão de Obra</h3>
+                      <NI label="Valor hora" value={vhm} onChange={sVhm} unit="R$/h" step={5} />
+                      <NI label="Setup" value={tsu} onChange={sTsu} unit="min" step={5} helpText="Preparar, fatiar, nivelar" />
+                      <NI label="Pós-processamento" value={tpp} onChange={sTpp} unit="min" step={5} />
+                      <div style={{ marginTop:16, padding:14, background:"#12121e", borderRadius:10, border:"1px solid #2a2a3e" }}>
+                        <div style={{ fontSize:12, color:"#888" }}>Total mão de obra</div>
+                        <div style={{ fontSize:20, fontWeight:700, color:"#ffa94d" }}>{tsu+tpp} min</div>
+                      </div>
+                    </>}
+                    {tab === "acabamento" && <>
+                      <h3 style={{ margin:"0 0 18px", fontSize:16 }}>✨ Pós-Processamento</h3>
+                      {[["Remoção suporte","Cortar suportes",1.5,sup,sSup],["Lixamento","Lixar superfícies",2.5,lix,sLix],["Pintura","Primer+tinta+verniz",8,pin,sPin],["Acabamento especial","Epóxi, acetona",5,acab,sAcab]].map(([lb,desc,pr,st,set]) => (
+                        <button key={lb} onClick={() => set(!st)} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", padding:"14px 16px", marginBottom:8, borderRadius:10, cursor:"pointer",
+                          border: st ? "2px solid #7c5cfc" : "1px solid #3a3a4a", background: st ? "#7c5cfc12" : "#1e1e2e", color:"#f0f0f0" }}>
+                          <div style={{ textAlign:"left" }}><div style={{ fontSize:14, fontWeight:600 }}>{lb}</div><div style={{ fontSize:11, color:"#666", marginTop:2 }}>{desc}</div></div>
+                          <div style={{ textAlign:"right" }}><div style={{ fontSize:14, fontWeight:700, color: st ? "#7c5cfc" : "#666" }}>+R$ {pr.toFixed(2)}</div>
+                            <div style={{ width:20, height:20, borderRadius:6, background: st?"#7c5cfc":"transparent", border: st?"none":"2px solid #3a3a4a", margin:"4px 0 0 auto", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, color:"#fff" }}>{st?"✓":""}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </>}
+                    {tab === "venda" && <>
+                      <h3 style={{ margin:"0 0 18px", fontSize:16 }}>📦 Frete, Impostos e Marketplace</h3>
+                      <div style={{ padding:16, background:"#12121e", borderRadius:12, border:"1px solid #2a2a3e", marginBottom:16 }}>
+                        <div style={{ fontSize:13, fontWeight:700, color:"#a9e34b", marginBottom:12, textTransform:"uppercase" }}>🚚 Frete e Embalagem</div>
+                        <NI label="Embalagem" value={ce} onChange={sCe} unit="R$" step={0.5} helpText="Caixa, bolha, fita" />
+                        <NI label="Frete" value={ff} onChange={sFf} unit="R$" helpText="Correios/transportadora" />
+                        <div style={{ display:"flex", gap:8 }}>
+                          {[[true,"Cliente paga"],[false,"Frete incluso"]].map(([v,lb]) => (
+                            <button key={String(v)} onClick={() => sFpc(v)} style={{ flex:1, padding:"10px 12px", borderRadius:10, cursor:"pointer", textAlign:"center",
+                              border: fpc===v ? "2px solid #a9e34b" : "1px solid #3a3a4a", background: fpc===v ? "#a9e34b15" : "#1e1e2e", color: fpc===v ? "#a9e34b" : "#888", fontSize:13, fontWeight:600 }}>{lb}</button>
+                          ))}
+                        </div>
+                      </div>
+                      <div style={{ padding:16, background:"#12121e", borderRadius:12, border:"1px solid #2a2a3e", marginBottom:16 }}>
+                        <div style={{ fontSize:13, fontWeight:700, color:"#ff8787", marginBottom:12, textTransform:"uppercase" }}>🏛️ Impostos</div>
+                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:12 }}>
+                          {[["informal","Informal","Sem CNPJ","0%"],["mei","MEI","Microempreendedor","~5%"],["simples","Simples","Anexo III/V","~6%"],["presumido","Presumido","ISS+PIS+COFINS","~11%"],["real","Lucro Real","Empresas maiores","~15%"],["custom","Personalizado","Sua alíquota","—"]].map(([id,lb,desc,rate]) => (
+                            <button key={id} onClick={() => sRt(id)} style={{ padding:"10px 12px", borderRadius:10, cursor:"pointer", textAlign:"left",
+                              border: rt===id ? "2px solid #ff8787" : "1px solid #3a3a4a", background: rt===id ? "#ff878715" : "#1e1e2e", color: rt===id ? "#ff8787" : "#aaa" }}>
+                              <div style={{ fontSize:13, fontWeight:600 }}>{lb}</div><div style={{ fontSize:10, color:"#666", marginTop:2 }}>{desc}</div><div style={{ fontSize:11, color:"#ff8787", marginTop:2, fontWeight:700 }}>{rate}</div>
+                            </button>
+                          ))}
+                        </div>
+                        {rt === "custom" && <SI label="Alíquota" value={ac} onChange={sAc} min={0} max={30} step={0.5} />}
+                        <div style={{ padding:10, background:"#1a1a2e", borderRadius:8 }}><div style={{ fontSize:12, color:"#888" }}>Alíquota efetiva</div><div style={{ fontSize:20, fontWeight:800, color:"#ff8787" }}>{aImp}%</div></div>
+                      </div>
+                      <div style={{ padding:16, background:"#12121e", borderRadius:12, border:"1px solid #2a2a3e" }}>
+                        <div style={{ fontSize:13, fontWeight:700, color:"#ffd43b", marginBottom:12, textTransform:"uppercase" }}>🛒 Marketplace</div>
+                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:12 }}>
+                          {Object.entries(marketplacePresets).map(([k,mp]) => (
+                            <button key={k} onClick={() => sMk(k)} style={{ padding:"10px 12px", borderRadius:10, cursor:"pointer", textAlign:"left",
+                              border: mk===k ? "2px solid #ffd43b" : "1px solid #3a3a4a", background: mk===k ? "#ffd43b15" : "#1e1e2e", color: mk===k ? "#ffd43b" : "#aaa" }}>
+                              <div style={{ fontSize:13, fontWeight:600 }}>{mp.label}</div><div style={{ fontSize:10, color:"#666", marginTop:2 }}>{mp.desc}</div>
+                              {k!=="nenhum" && k!=="custom" && <div style={{ fontSize:11, color:"#ffd43b", marginTop:2, fontWeight:700 }}>~{mp.taxa}%</div>}
+                            </button>
+                          ))}
+                        </div>
+                        {mk === "custom" && <SI label="Taxa marketplace" value={tmc} onChange={sTmc} min={0} max={40} step={0.5} />}
+                        {mk !== "nenhum" && <NI label="Taxa fixa/venda" value={tfm} onChange={sTfm} unit="R$" step={0.5} />}
+                        <div style={{ padding:10, background:"#1a1a2e", borderRadius:8 }}><div style={{ fontSize:12, color:"#888" }}>Taxa</div><div style={{ fontSize:20, fontWeight:800, color:"#ffd43b" }}>{tMk}%{tfm>0?` + R$${tfm.toFixed(2)}`:""}</div></div>
+                      </div>
+                    </>}
+                    {tab === "negocio" && <>
+                      <h3 style={{ margin:"0 0 18px", fontSize:16 }}>💼 Negócio</h3>
+                      <SI label="Margem de lucro" value={ml} onChange={sMl} min={0} max={200} step={5} helpText="Sobre custo de produção" />
+                      <NI label="Custos fixos/mês" value={cfm} onChange={sCfm} unit="R$" step={10} helpText="Aluguel, internet, software" />
+                      <NI label="Horas produtivas/mês" value={hm} onChange={sHm} unit="h" step={10} />
+                      <div style={{ marginTop:16, padding:14, background:"#12121e", borderRadius:10, border:"1px solid #2a2a3e" }}>
+                        <div style={{ fontSize:12, color:"#888" }}>Custo fixo/hora</div>
+                        <div style={{ fontSize:20, fontWeight:700, color:"#69db7c" }}>R$ {(cfm/hm).toFixed(2)}/h</div>
+                      </div>
+                      <div style={{ marginTop:16, padding:14, background:"#12121e", borderRadius:10, border:"1px solid #ff878744" }}>
+                        <div style={{ fontSize:12, color:"#888", marginBottom:8 }}>Deduções sobre venda</div>
+                        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}><span style={{ fontSize:13, color:"#ccc" }}>Impostos ({aImp}%)</span><span style={{ fontSize:13, fontWeight:700, color:"#ff8787" }}>{f(c.vImp)}</span></div>
+                        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}><span style={{ fontSize:13, color:"#ccc" }}>Marketplace ({tMk}%)</span><span style={{ fontSize:13, fontWeight:700, color:"#ffd43b" }}>{f(c.vMk)}</span></div>
+                        <div style={{ height:1, background:"#3a3a4a", margin:"8px 0" }} />
+                        <div style={{ display:"flex", justifyContent:"space-between" }}><span style={{ fontSize:13, fontWeight:700 }}>Total</span><span style={{ fontSize:15, fontWeight:800, color:"#ff6b6b" }}>{f(c.vImp+c.vMk)}</span></div>
+                      </div>
+                    </>}
+                  </div>
+                </div>
 
-            {tab === "arquivo" && (
-              <>
-                <NI label="NOME DA PEÇA" value={nome} onChange={sNome} />
-                <button onClick={doSave} style={{ width: "100%", padding: "15px", borderRadius: 12, background: "#30D158", color: "#FFF", border: "none", fontWeight: "800", marginBottom: 20 }}>SALVAR NO ARQUIVO</button>
-                <div style={{ maxHeight: 300, overflowY: "auto" }}>
-                  {arch.map(p => (
-                    <div key={p.id} style={{ padding: "12px", background: "#2C2C2E", borderRadius: 10, marginBottom: 8, fontSize: 11 }}>
-                      <div style={{ fontWeight: "800" }}>{p.nome} - {p.params.mat}</div>
-                      <div style={{ color: "#30D158" }}>VENDA: {f(p.res.pVenda)}</div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-          <footer style={{ textAlign: "center", marginTop: 25, fontSize: 10, color: "#48484A" }}>
-            CB²K PRESENTES 3D - TODOS OS DADOS EM CAIXA ALTA
-          </footer>
-        </div>
-      );
-    }
+                <div style={{ flex:1, minWidth:300 }}>
+                  <div style={{ background:"#1a1a2e", borderRadius:16, padding:24, border:"1px solid #2a2a3e" }}>
+                    <h3 style={{ margin:"0 0 18px", fontSize:16 }}>📊 Decomposição do Custo</h3>
+                    <div style={{ display:"flex", height:12, borderRadius:6, overflow:"hidden", marginBottom:20 }}>
+                      {bdi.map(i => { const p = c.cTot > 0 ? (i.v/c.cTot)*100 : 0; return p > 0.5 ? <div key={i.l} style={{ width:`${p}%`, background:i.cl, transition:"width 0.3s" }} /> : null; })}
+                    </div>
+                    {bdi.map(i => { const p = c.cTot > 0 ? (i.v/c.cTot)*100 : 0; return (
+                      <div key={i.l} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:"1px solid #2a2a3e" }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:10 }}><div style={{ width:10, height:10, borderRadius:3, background:i.cl }} /><span style={{ fontSize:14, color:"#ccc" }}>{i.l}</span></div>
+                        <div><span style={{ fontSize:14, fontWeight:700 }}>{f(i.v)}</span><span style={{ fontSize:11, color:"#666", marginLeft:8 }}>{p.toFixed(1)}%</span></div>
+                      </div>); })}
+                    <div style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #3a3a4a" }}>
+                      <span style={{ fontSize:14, fontWeight:700, color:"#aaa" }}>Custo produção</span><span style={{ fontSize:16, fontWeight:700, color:"#ffa94d" }}>{f(c.cProd)}</span>
+                    </div>
+                    <div style={{ display:"flex", justifyContent:"space-between", padding:"14px 0", marginTop:4, borderTop:"2px solid #7c5cfc44" }}>
+                      <span style={{ fontSize:16, fontWeight:800 }}>CUSTO TOTAL</span><span style={{ fontSize:20, fontWeight:800, color:"#7c5cfc" }}>{f(c.cTot)}</span>
+                    </div>
+                    <div style={{ marginTop:16, padding:16, background:"linear-gradient(135deg,#7c5cfc15,#00d4aa15)", borderRadius:12, border:"1px solid #7c5cfc33" }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}><span style={{ color:"#aaa", fontSize:13 }}>Preço venda</span><span style={{ color:"#00d4aa", fontSize:18, fontWeight:800 }}>{f(c.pVenda)}</span></div>
+                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}><span style={{ color:"#aaa", fontSize:13 }}>Lucro líquido</span><span style={{ color:"#7c5cfc", fontSize:16, fontWeight:700 }}>{f(c.lucro)}</span></div>
+                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}><span style={{ color:"#aaa", fontSize:13 }}>Margem real</span><span style={{ color: c.mReal>=ml?"#00d4aa":"#ff6b6b", fontSize:14, fontWeight:700 }}>{c.mReal.toFixed(1)}%</span></div>
+                      {fpc && ff > 0 && <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8, opacity:0.7 }}><span style={{ color:"#aaa", fontSize:12 }}>+ Frete (cliente)</span><span style={{ color:"#a9e34b", fontSize:13, fontWeight:600 }}>+ {f(ff)}</span></div>}
+                      {qtd > 1 && <>
+                        <div style={{ height:1, background:"#3a3a4a", margin:"10px 0" }} />
+                        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}><span style={{ color:"#aaa", fontSize:13 }}>Total ({qtd}x)</span><span style={{ color:"#00d4aa", fontSize:16, fontWeight:700 }}>{f(c.pVendaLote)}</span></div>
+                        <div style={{ display:"flex", justifyContent:"space-between" }}><span style={{ color:"#aaa", fontSize:13 }}>Lucro total</span><span style={{ color:"#7c5cfc", fontSize:16, fontWeight:700 }}>{f(c.lucroLote)}</span></div>
+                      </>}
+                    </div>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginTop:16 }}>
+                      {[["Custo/g", pg>0?`R$ ${(c.cTot/pg).toFixed(3)}`:"—","#ffa94d"],["Custo/h", c.tH>0?`R$ ${(c.cTot/c.tH).toFixed(2)}`:"—","#ffa94d"],["Deprec./h",`R$ ${(ci/vu).toFixed(2)}`,"#74c0fc"],["Taxas",`${(aImp+tMk).toFixed(1)}%`,"#ff8787"]].map(([lb,v,cl]) => (
+                        <div key={lb} style={{ padding:12, background:"#12121e", borderRadius:10, textAlign:"center" }}>
+                          <div style={{ fontSize:11, color:"#666" }}>{lb}</div><div style={{ fontSize:16, fontWeight:700, color:cl }}>{v}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div style={{ textAlign:"center", marginTop:24, padding:16, color:"#444", fontSize:12 }}>Valores estimados. Consulte um contador para alíquotas exatas.</div>
+          </div>
+        </div>
+      );
+    }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-  </script>
+    ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+  </script>
 </body>
 </html>
