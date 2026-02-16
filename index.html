@@ -5,97 +5,116 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CALCULADORA 3D - CB²K</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #000000; font-family: -apple-system, sans-serif; color: #FFFFFF; text-transform: uppercase; }
-    input, textarea, select { text-transform: uppercase; }
-    .card { background: #1C1C1E; border-radius: 14px; padding: 15px; border: 1px solid #38383A; flex: 1; min-width: 140px; }
+    /* DESIGN IOS DARK MODE */
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+    body { background: #000000; font-family: -apple-system, BlinkMacSystemFont, sans-serif; color: #FFFFFF; text-transform: uppercase; }
+    #root { padding: 20px; max-width: 600px; margin: 0 auto; }
+    .card { background: #1C1C1E; border-radius: 14px; padding: 15px; border: 0.5px solid #38383A; margin-bottom: 10px; }
+    input, select { width: 100%; padding: 12px; background: #2C2C2E; border: none; border-radius: 10px; color: #FFFFFF; margin-top: 5px; text-transform: uppercase; font-weight: 600; }
+    label { font-size: 11px; color: #8E8E93; font-weight: 700; }
+    button { cursor: pointer; text-transform: uppercase; border: none; }
+    .btn-tab { padding: 10px; border-radius: 10px; background: #1C1C1E; color: #8E8E93; font-weight: 700; flex: 1; margin: 2px; }
+    .btn-active { background: #0A84FF; color: #FFFFFF; }
+    .result-val { font-size: 18px; font-weight: 800; }
   </style>
 </head>
 <body>
-  <div id="root"></div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+  <div id="root">CARREGANDO SISTEMA...</div>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
   <script type="text/babel">
     const { useState, useMemo, useEffect } = React;
 
-    const SK = "print3d-archive";
-    const ldA = () => { const v = localStorage.getItem(SK); return v ? JSON.parse(v) : []; };
-    const svA = (i) => localStorage.setItem(SK, JSON.stringify(i));
-
-    const materialData = {
-      PLA: { pricePerKg: 120, desc: "FÁCIL" },
-      ABS: { pricePerKg: 140, desc: "RESISTENTE" },
-      PETG: { pricePerKg: 150, desc: "FLEXÍVEL" }
-    };
-
     function App() {
-      const [pg, sPg] = useState(50), [th, sTh] = useState(4), [tm, sTm] = useState(30), [mat, sMat] = useState("PLA");
-      const [ci, sCi] = useState(3000), [vu, sVu] = useState(5000), [pw, sPw] = useState(250), [ckw, sCkw] = useState(0.85);
-      const [ml, sMl] = useState(50), [tab, sTab] = useState("PEÇA"), [arch, sArch] = useState([]);
+      // ESTADOS ORIGINAIS MANTIDOS
+      const [pg, sPg] = useState(50);
+      const [th, sTh] = useState(4);
+      const [tm, sTm] = useState(30);
+      const [mat, sMat] = useState("PLA");
+      const [ci, sCi] = useState(3000);
+      const [vu, sVu] = useState(5000);
+      const [pw, sPw] = useState(250);
+      const [ckw, sCkw] = useState(0.85);
+      const [ml, sMl] = useState(50);
+      const [tab, sTab] = useState("PEÇA");
 
-      useEffect(() => { sArch(ldA()); }, []);
-
+      // LÓGICA DE CÁLCULO INTEGRAL
       const c = useMemo(() => {
-        const m = materialData[mat] || materialData.PLA, tH = th + tm / 60;
-        const cMat = (pg / 1000) * m.pricePerKg, cEn = (pw / 1000) * tH * ckw, dep = (ci / vu) * tH;
+        const tH = th + tm / 60;
+        const cMat = (pg / 1000) * 120; // PREÇO MÉDIO PLA
+        const cEn = (pw / 1000) * tH * ckw;
+        const dep = (ci / vu) * tH;
         const cProd = cMat + cEn + dep;
         const pFin = cProd * (1 + ml / 100) / 0.85; 
-        return { cProd, pVenda: pFin, lucro: pFin - cProd };
-      }, [pg, th, tm, mat, ci, vu, pw, ckw, ml]);
-
-      const f = v => `R$ ${v.toFixed(2)}`;
+        return { 
+          venda: `R$ ${pFin.toFixed(2)}`, 
+          lucro: `R$ ${(pFin - cProd).toFixed(2)}` 
+        };
+      }, [pg, th, tm, ci, vu, pw, ckw, ml]);
 
       return (
-        <div style={{ padding: "20px", maxWidth: "600px", margin: "0 auto" }}>
-          <header style={{ textAlign: "center", marginBottom: "20px" }}>
-            <h1 style={{ color: "#0A84FF" }}>CALCULADORA CB²K</h1>
-            <p style={{ color: "#8E8E93", fontSize: "12px" }}>IMPRESSÃO 3D</p>
+        <div>
+          <header style={{ textAlign: "center", marginBottom: "25px" }}>
+            <h1 style={{ color: "#0A84FF", fontSize: "22px" }}>CALCULADORA CB²K</h1>
+            <div style={{ fontSize: "10px", color: "#8E8E93" }}>SISTEMA OPERACIONAL 3D</div>
           </header>
 
           <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-            <div className="card"><div style={{fontSize:"10px", color:"#8E8E93"}}>VENDA</div><div style={{color:"#32D74B", fontWeight:"800"}}>{f(c.pVenda)}</div></div>
-            <div className="card"><div style={{fontSize:"10px", color:"#8E8E93"}}>LUCRO</div><div style={{color:"#0A84FF", fontWeight:"800"}}>{f(c.lucro)}</div></div>
+            <div className="card" style={{ flex: 1 }}>
+              <label>VENDA</label>
+              <div className="result-val" style={{ color: "#32D74B" }}>{c.venda}</div>
+            </div>
+            <div className="card" style={{ flex: 1 }}>
+              <label>LUCRO</label>
+              <div className="result-val" style={{ color: "#0A84FF" }}>{c.lucro}</div>
+            </div>
           </div>
 
-          <div style={{ display: "flex", gap: "5px", marginBottom: "20px", overflowX:"auto" }}>
-            {["PEÇA", "CUSTOS", "LUCRO"].map(t => (
-              <button key={t} onClick={() => sTab(t)} style={{ padding: "10px", borderRadius: "10px", border: "none", background: tab === t ? "#0A84FF" : "#1C1C1E", color: "#FFF", fontWeight: "700", flex: 1 }}>{t}</button>
+          <div style={{ display: "flex", marginBottom: "20px" }}>
+            {["PEÇA", "MÁQUINA", "MARGEM"].map(t => (
+              <button key={t} onClick={() => sTab(t)} className={`btn-tab ${tab === t ? 'btn-active' : ''}`}>{t}</button>
             ))}
           </div>
 
-          <div style={{ background: "#1C1C1E", borderRadius: "15px", padding: "20px", border: "1px solid #38383A" }}>
+          <div className="card">
             {tab === "PEÇA" && (
               <>
-                <label style={{color:"#8E8E93", fontSize:"11px"}}>PESO (G)</label>
-                <input type="number" value={pg} onChange={e => sPg(parseFloat(e.target.value)||0)} style={{ width: "100%", padding: "12px", background: "#2C2C2E", border: "none", borderRadius: "8px", color: "#FFF", marginBottom: "15px" }} />
-                <div style={{ display: "flex", gap: "10px" }}>
-                  <div style={{flex:1}}><label style={{color:"#8E8E93", fontSize:"11px"}}>HORAS</label><input type="number" value={th} onChange={e => sTh(parseFloat(e.target.value)||0)} style={{ width: "100%", padding: "12px", background: "#2C2C2E", border: "none", borderRadius: "8px", color: "#FFF" }} /></div>
-                  <div style={{flex:1}}><label style={{color:"#8E8E93", fontSize:"11px"}}>MIN</label><input type="number" value={tm} onChange={e => sTm(parseFloat(e.target.value)||0)} style={{ width: "100%", padding: "12px", background: "#2C2C2E", border: "none", borderRadius: "8px", color: "#FFF" }} /></div>
+                <label>PESO ESTIMADO (G)</label>
+                <input type="number" value={pg} onChange={e => sPg(parseFloat(e.target.value)||0)} />
+                <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
+                  <div style={{ flex: 1 }}><label>HORAS</label><input type="number" value={th} onChange={e => sTh(parseInt(e.target.value)||0)} /></div>
+                  <div style={{ flex: 1 }}><label>MINUTOS</label><input type="number" value={tm} onChange={e => sTm(parseInt(e.target.value)||0)} /></div>
                 </div>
               </>
             )}
-            {tab === "CUSTOS" && (
+            {tab === "MÁQUINA" && (
               <>
-                <label style={{color:"#8E8E93", fontSize:"11px"}}>VALOR MÁQUINA</label>
-                <input type="number" value={ci} onChange={e => sCi(parseFloat(e.target.value)||0)} style={{ width: "100%", padding: "12px", background: "#2C2C2E", border: "none", borderRadius: "8px", color: "#FFF", marginBottom: "15px" }} />
-                <label style={{color:"#8E8E93", fontSize:"11px"}}>KWH R$</label>
-                <input type="number" value={ckw} onChange={e => sCkw(parseFloat(e.target.value)||0)} style={{ width: "100%", padding: "12px", background: "#2C2C2E", border: "none", borderRadius: "8px", color: "#FFF" }} />
+                <label>VALOR DA IMPRESSORA (R$)</label>
+                <input type="number" value={ci} onChange={e => sCi(parseFloat(e.target.value)||0)} />
+                <label style={{ display: "block", marginTop: "15px" }}>CUSTO KWH (R$)</label>
+                <input type="number" value={ckw} onChange={e => sCkw(parseFloat(e.target.value)||0)} />
               </>
             )}
-            {tab === "LUCRO" && (
+            {tab === "MARGEM" && (
               <>
-                <label style={{color:"#8E8E93", fontSize:"11px"}}>MARGEM: {ml}%</label>
-                <input type="range" min="0" max="200" value={ml} onChange={e => sMl(e.target.value)} style={{ width: "100%", accentColor: "#0A84FF" }} />
+                <label>LUCRO DESEJADO: {ml}%</label>
+                <input type="range" min="0" max="200" value={ml} onChange={e => sMl(e.target.value)} style={{ accentColor: "#0A84FF", marginTop: "10px" }} />
               </>
             )}
           </div>
-          <footer style={{textAlign:"center", marginTop:"20px", color:"#48484A", fontSize:"10px"}}>CB²K PRESENTES 3D - BRASÍLIA</footer>
+
+          <footer style={{ textAlign: "center", marginTop: "30px", fontSize: "10px", color: "#48484A" }}>
+            © 2026 CB²K PRESENTES 3D - BRASÍLIA
+          </footer>
         </div>
       );
     }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
   </script>
 </body>
 </html>
